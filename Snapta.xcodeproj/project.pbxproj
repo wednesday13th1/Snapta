@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXFileReference section */
-		A00000000000000000000001 /* Snapta.app */ = {isa = PBXFileReference; lastKnownFileType = wrapper.application; name = Snapta.app; path = Snapta_AI.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A00000000000000000000001 /* Snapta.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = Snapta.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -48,9 +48,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A00000000000000000000008 /* Snapta_AI */ = {
+		A00000000000000000000008 /* Snapta */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A00000000000000000000009 /* Build configuration list for PBXNativeTarget "Snapta_AI" */;
+			buildConfigurationList = A00000000000000000000009 /* Build configuration list for PBXNativeTarget "Snapta" */;
 			buildPhases = (
 				A00000000000000000000005 /* Sources */,
 				A00000000000000000000006 /* Frameworks */,
@@ -63,7 +63,7 @@
 			fileSystemSynchronizedGroups = (
 				A00000000000000000000002 /* Snapta */,
 			);
-			name = Snapta_AI;
+			name = Snapta;
 			packageProductDependencies = (
 			);
 			productName = Snapta;
@@ -99,7 +99,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				A00000000000000000000008 /* Snapta_AI */,
+				A00000000000000000000008 /* Snapta */,
 			);
 		};
 /* End PBXProject section */
@@ -217,7 +217,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A00000000000000000000009 /* Build configuration list for PBXNativeTarget "Snapta_AI" */ = {
+		A00000000000000000000009 /* Build configuration list for PBXNativeTarget "Snapta" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A0000000000000000000000E /* Debug */,
