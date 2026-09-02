@@ -15,9 +15,14 @@ struct KarutaEntry: Identifiable, Codable, Equatable {
     var category: String?
     var note: String?
     var learnedAt: Date?
+    var example: String?
 
     var image: UIImage? { imageData.flatMap(UIImage.init(data:)) }
-    var meaningText: String { meaning.flatMap { $0.isEmpty ? nil : $0 } ?? "写真と結びつけて覚えることばです。" }
+    var meaningText: String {
+        meaning.flatMap { $0.isEmpty ? nil : $0 }
+            ?? note.flatMap { $0.isEmpty ? nil : $0 }
+            ?? imageTitle
+    }
     var categoryText: String { category.flatMap { $0.isEmpty ? nil : $0 } ?? "理科" }
     var isLearned: Bool { imageData != nil }
 }
@@ -34,7 +39,7 @@ final class LearningFlow: ObservableObject {
 
     private let storageKey = "snapta.karuta.entries.v1"
     static let starterEntries = [
-        KarutaEntry(word: "反射", reading: "はんしゃ", imageTitle: "水たまり", symbol: "drop.fill", meaning: "光がものに当たって、はね返ること。", category: "理科"),
+        KarutaEntry(word: "反射", reading: "はんしゃ", imageTitle: "水たまり", symbol: "drop.fill", meaning: "光がものに当たって、はね返ること。", category: "理科", example: "鏡に光が反射する。"),
         KarutaEntry(word: "蒸発", reading: "じょうはつ", imageTitle: "湯気", symbol: "cloud.fill", meaning: "液体が気体に変わること。", category: "理科"),
         KarutaEntry(word: "対称", reading: "たいしょう", imageTitle: "ちょう", symbol: "butterfly.fill", meaning: "折ったとき、形がぴったり重なること。", category: "算数・数学"),
         KarutaEntry(word: "循環", reading: "じゅんかん", imageTitle: "水のめぐり", symbol: "arrow.triangle.2.circlepath", meaning: "ひとめぐりして、また元へ戻ること。", category: "理科"),

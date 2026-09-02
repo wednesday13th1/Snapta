@@ -5,7 +5,6 @@ private enum AppTab: String, CaseIterable {
     case karuta = "カルタ"
     case add = "追加"
     case notebook = "単語帳"
-    case words = "言葉"
 
     var icon: String {
         switch self {
@@ -13,7 +12,6 @@ private enum AppTab: String, CaseIterable {
         case .karuta: "rectangle.stack.fill"
         case .add: "plus"
         case .notebook: "book.closed.fill"
-        case .words: "text.book.closed.fill"
         }
     }
 }
@@ -53,8 +51,6 @@ struct ContentView: View {
             Color.clear.onAppear { showAddFlow = true; selectedTab = .home }
         case .notebook:
             NotebookScreen(flow: flow)
-        case .words:
-            WordLibraryScreen(flow: flow)
         }
     }
 
@@ -108,14 +104,13 @@ private struct BottomNavigation: View {
             Button { showAdd = true } label: {
                 VStack(spacing: 4) {
                     ZStack {
-                        Circle().fill(SnaptaTheme.indigo).frame(width: 48, height: 48)
+                        Circle().fill(SnaptaTheme.indigo).frame(width: 46, height: 46)
                         Image(systemName: "plus").font(.system(size: 21, weight: .bold)).foregroundStyle(.white)
                     }
-                    Text("追加").font(.system(size: 10, weight: .bold)).foregroundStyle(SnaptaTheme.indigo)
+                    Text("追加").font(.system(size: 11, weight: .bold)).foregroundStyle(SnaptaTheme.indigo)
                 }.frame(maxWidth: .infinity)
             }.accessibilityLabel("新しい言葉を追加")
             tab(.notebook)
-            tab(.words)
         }
         .padding(.top, 8)
         .padding(.horizontal, 8)
@@ -126,8 +121,8 @@ private struct BottomNavigation: View {
     private func tab(_ tab: AppTab) -> some View {
         Button { selected = tab } label: {
             VStack(spacing: 4) {
-                Image(systemName: tab.icon).font(.system(size: 18, weight: .medium)).frame(height: 25)
-                Text(tab.rawValue).font(.system(size: 10, weight: selected == tab ? .bold : .medium))
+                Image(systemName: tab.icon).font(.system(size: 19, weight: .semibold)).frame(height: 26)
+                Text(tab.rawValue).font(.system(size: 11, weight: selected == tab ? .bold : .medium))
             }.foregroundStyle(selected == tab ? SnaptaTheme.indigo : SnaptaTheme.ink.opacity(0.42)).frame(maxWidth: .infinity)
         }.accessibilityLabel(tab.rawValue).accessibilityAddTraits(selected == tab ? .isSelected : [])
     }

@@ -18,51 +18,51 @@ struct HomeTabScreen: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 22) {
-                ScreenHeader(title: "Snapta", subtitle: "今日は、どんな言葉を見つける？")
+            VStack(spacing: 20) {
+                ScreenHeader(title: "Snapta", subtitle: "きょうの言葉を見つけよう")
+
                 PaperPanel {
-                    VStack(spacing: 18) {
-                        Text("今日のことば").font(.system(size: 12, weight: .bold)).tracking(2).foregroundStyle(SnaptaTheme.vermilion)
-                        Text(flow.word).font(SnaptaTheme.mincho(46, weight: .semibold)).tracking(6)
-                        Text(flow.currentEntry.meaningText).font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(SnaptaTheme.ink.opacity(0.65)).multilineTextAlignment(.center).lineSpacing(4)
-                        Text("身の回りから「\(flow.word)」を探してみよう。")
-                            .font(.system(size: 15, weight: .bold)).multilineTextAlignment(.center)
-                        PrimaryButton("探しに行く", icon: "camera.fill") { flow.go(.camera) }
-                    }
-                }
-                PaperPanel {
-                    VStack(alignment: .leading, spacing: 14) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("カルタで復習").font(SnaptaTheme.mincho(20, weight: .semibold))
-                                Text("覚えた言葉、まだ覚えてる？").font(.system(size: 13)).foregroundStyle(SnaptaTheme.ink.opacity(0.55))
-                            }
-                            Spacer()
-                            Text("\(flow.learnedEntries.count)枚").font(.system(size: 14, weight: .bold)).foregroundStyle(SnaptaTheme.indigo)
+                    VStack(spacing: 22) {
+                        Text("きょうの言葉")
+                            .font(.system(size: 13, weight: .bold))
+                            .tracking(2)
+                            .foregroundStyle(SnaptaTheme.vermilion)
+
+                        VStack(spacing: 8) {
+                            Text(flow.word)
+                                .font(SnaptaTheme.mincho(48, weight: .semibold))
+                                .tracking(5)
+                                .minimumScaleFactor(0.7)
+                                .lineLimit(1)
+                            Text(flow.currentEntry.reading)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(SnaptaTheme.ink.opacity(0.48))
                         }
-                        Button(action: openKaruta) {
-                            Label("カルタを始める", systemImage: "rectangle.stack.fill")
-                                .font(.system(size: 15, weight: .bold)).frame(maxWidth: .infinity).frame(height: 46)
-                                .foregroundStyle(SnaptaTheme.indigo).overlay(RoundedRectangle(cornerRadius: 7).stroke(SnaptaTheme.indigo.opacity(0.4)))
-                        }.disabled(flow.learnedEntries.isEmpty).opacity(flow.learnedEntries.isEmpty ? 0.4 : 1)
-                    }
-                }
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack { Text("最近のことば").font(SnaptaTheme.mincho(19, weight: .semibold)); Spacer(); Button("すべて見る", action: openNotebook).font(.system(size: 13, weight: .bold)) }
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 10) {
-                            ForEach(Array(flow.entries.reversed().prefix(5))) { entry in
-                                Button { flow.select(entry) } label: {
-                                    Text(entry.word).font(SnaptaTheme.mincho(17, weight: .semibold)).foregroundStyle(SnaptaTheme.ink)
-                                        .frame(width: 94, height: 68).background(SnaptaTheme.paperLight)
-                                        .clipShape(RoundedRectangle(cornerRadius: 5)).overlay(RoundedRectangle(cornerRadius: 5).stroke(SnaptaTheme.line))
-                                }
-                            }
+
+                        Text(flow.currentEntry.meaningText)
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(SnaptaTheme.ink.opacity(0.7))
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(5)
+
+                        PrimaryButton("この言葉をさがす", icon: "camera.fill") {
+                            flow.go(.camera)
                         }
                     }
                 }
-            }.padding(.horizontal, 20).padding(.top, 16).padding(.bottom, 24)
+
+                HStack(spacing: 8) {
+                    Image(systemName: "lightbulb.fill")
+                    Text("ほかの言葉は、下の「言葉」からえらべるよ")
+                }
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(SnaptaTheme.ink.opacity(0.52))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 8)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 18)
+            .padding(.bottom, 30)
         }
     }
 }
@@ -70,28 +70,37 @@ struct HomeTabScreen: View {
 struct KarutaLandingScreen: View {
     @ObservedObject var flow: LearningFlow
     let start: () -> Void
+
     var body: some View {
         ScrollView {
-            VStack(spacing: 22) {
-                ScreenHeader(title: "カルタ", subtitle: "撮った写真で、言葉を思い出そう。")
+            VStack(spacing: 20) {
+                ScreenHeader(title: "カルタ", subtitle: "写真を見て、言葉を当てよう")
+
                 PaperPanel {
-                    VStack(spacing: 18) {
-                        Image(systemName: "rectangle.stack.fill").font(.system(size: 42)).foregroundStyle(SnaptaTheme.indigo)
-                        Text("今日の復習").font(SnaptaTheme.mincho(23, weight: .semibold))
-                        Text(flow.learnedEntries.isEmpty ? "まずは言葉を探して、写真の札を作ろう。" : "\(flow.learnedEntries.count)枚の写真札で遊べます。")
-                            .font(.system(size: 15)).foregroundStyle(SnaptaTheme.ink.opacity(0.6)).multilineTextAlignment(.center)
-                        PrimaryButton("カルタを始める", icon: "play.fill", action: start)
-                            .disabled(flow.learnedEntries.isEmpty).opacity(flow.learnedEntries.isEmpty ? 0.4 : 1)
+                    VStack(spacing: 24) {
+                        ZStack {
+                            Circle().fill(SnaptaTheme.indigo.opacity(0.1)).frame(width: 92, height: 92)
+                            Image(systemName: "rectangle.stack.fill")
+                                .font(.system(size: 40))
+                                .foregroundStyle(SnaptaTheme.indigo)
+                        }
+
+                        VStack(spacing: 7) {
+                            Text(flow.learnedEntries.isEmpty ? "写真の札を作ろう" : "\(flow.learnedEntries.count)枚の札であそべるよ")
+                                .font(SnaptaTheme.mincho(22, weight: .semibold))
+                            Text(flow.learnedEntries.isEmpty ? "ホームで言葉をさがして、写真をとってね。" : "読みを聞いて、写真と意味の札を横へ払おう！")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(SnaptaTheme.ink.opacity(0.6))
+                                .multilineTextAlignment(.center)
+                        }
+
+                        PrimaryButton("カルタをはじめる", icon: "play.fill", action: start)
+                            .disabled(flow.learnedEntries.isEmpty)
+                            .opacity(flow.learnedEntries.isEmpty ? 0.4 : 1)
                     }
                 }
-                ForEach([("最近覚えた言葉", "clock"), ("すべての言葉", "square.grid.2x2")], id: \.0) { option in
-                    Button(action: start) {
-                        HStack { Image(systemName: option.1); Text(option.0).font(.system(size: 16, weight: .bold)); Spacer(); Image(systemName: "chevron.right") }
-                            .foregroundStyle(SnaptaTheme.ink).padding(18).background(SnaptaTheme.paperLight)
-                            .clipShape(RoundedRectangle(cornerRadius: 7)).overlay(RoundedRectangle(cornerRadius: 7).stroke(SnaptaTheme.line))
-                    }.disabled(flow.learnedEntries.isEmpty)
-                }
-            }.padding(20)
+            }
+            .padding(20)
         }
     }
 }
