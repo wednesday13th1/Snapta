@@ -22,27 +22,35 @@ private struct SelectedPhoto: View {
 struct SavedScreen: View {
     @ObservedObject var flow: LearningFlow
     @State private var appeared = false
+    @State private var note = ""
 
     var body: some View {
-        Spacer()
-        PaperPanel {
-            VStack(spacing: 22) {
-                SelectedPhoto(image: flow.capturedImage).frame(height: 190)
-                ZStack {
-                    Circle().fill(SnaptaTheme.moss.opacity(0.14)).frame(width: 70, height: 70)
-                    Image(systemName: "checkmark").font(.system(size: 28, weight: .medium)).foregroundStyle(SnaptaTheme.moss)
+        ScrollView {
+            PaperPanel {
+                VStack(spacing: 22) {
+                    SelectedPhoto(image: flow.capturedImage).frame(height: 190)
+                    ZStack {
+                        Circle().fill(SnaptaTheme.moss.opacity(0.14)).frame(width: 70, height: 70)
+                        Image(systemName: "checkmark").font(.system(size: 28, weight: .medium)).foregroundStyle(SnaptaTheme.moss)
+                    }
+                    .scaleEffect(appeared ? 1 : 0.8)
+                    Text("写真の札ができました")
+                        .font(SnaptaTheme.mincho(22, weight: .semibold))
+                    Text("どうしてこれが「\(flow.word)」だと思った？")
+                        .font(.system(size: 15, weight: .bold)).multilineTextAlignment(.center)
+                    TextField("短い言葉で書いてみよう", text: $note, axis: .vertical)
+                        .lineLimit(2...4).padding(14).background(SnaptaTheme.paper)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                    PrimaryButton("単語帳に保存", icon: "book.closed.fill") {
+                        flow.updateNote(note)
+                        flow.go(.quiz)
+                    }
                 }
-                .scaleEffect(appeared ? 1 : 0.8)
-                Text("写真の札ができました")
-                    .font(SnaptaTheme.mincho(22, weight: .semibold))
-                Text("この写真を使って、ことばかるたで遊ぼう。")
-                    .font(.system(size: 15)).multilineTextAlignment(.center)
-                    .foregroundStyle(SnaptaTheme.ink.opacity(0.64))
-                PrimaryButton("ことばかるたで遊ぶ", icon: "rectangle.stack.fill") { flow.go(.quiz) }
             }
+            .padding(.horizontal, 20)
+            .padding(.top, 4)
+            .padding(.bottom, 30)
         }
-        .padding(.horizontal, 20)
-        Spacer().frame(height: 30)
         .onAppear { withAnimation(.easeOut(duration: 0.35)) { appeared = true } }
     }
 }
@@ -66,7 +74,7 @@ struct QuizScreen: View {
                     WordCard(word: flow.word, reading: flow.currentEntry.reading, compact: true)
 
                     LazyVGrid(columns: columns, spacing: 10) {
-                        ForEach(flow.entries) { entry in
+                        ForEach(flow.learnedEntries) { entry in
                             QuizPhotoCard(
                                 entry: entry,
                                 selected: flow.selectedAnswer == entry.id
@@ -89,13 +97,13 @@ struct QuizScreen: View {
                     }
 
                     if flow.quizCompleted {
-                        PrimaryButton("もう一度あそぶ", icon: "arrow.counterclockwise") {
-                            withAnimation {
-                                flow.selectedAnswer = nil
-                                flow.quizMessage = nil
-                                flow.quizCompleted = false
-                            }
+                        VStack(spacing: 8) {
+                            Text(flow.currentEntry.word).font(SnaptaTheme.mincho(25, weight: .semibold))
+                            Text(flow.currentEntry.meaningText).font(.system(size: 15)).multilineTextAlignment(.center)
+                                .foregroundStyle(SnaptaTheme.ink.opacity(0.65))
                         }
+                        .padding(14).frame(maxWidth: .infinity).background(SnaptaTheme.moss.opacity(0.08))
+                        PrimaryButton("次の札へ", icon: "arrow.right") { flow.nextQuizWord() }
                     }
                 }
             }
