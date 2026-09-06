@@ -15,13 +15,15 @@ struct HomeTabScreen: View {
     @ObservedObject var flow: LearningFlow
     let openKaruta: () -> Void
     let openNotebook: () -> Void
+    let startLearning: () -> Void
 
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
                 ScreenHeader(title: "Snapta", subtitle: "きょうの言葉を見つけよう")
 
-                PaperPanel {
+                if flow.hasUnregisteredWords {
+                    PaperPanel {
                     VStack(spacing: 22) {
                         Text("きょうの言葉")
                             .font(.system(size: 13, weight: .bold))
@@ -46,9 +48,12 @@ struct HomeTabScreen: View {
                             .lineSpacing(5)
 
                         PrimaryButton("この言葉をさがす", icon: "camera.fill") {
-                            flow.go(.camera)
+                            startLearning()
                         }
                     }
+                    }
+                } else {
+                    EmptyState(icon: "checkmark.circle.fill", text: "すべての言葉をカルタに追加したよ！")
                 }
 
                 HStack(spacing: 8) {
@@ -63,6 +68,159 @@ struct HomeTabScreen: View {
             .padding(.horizontal, 20)
             .padding(.top, 18)
             .padding(.bottom, 30)
+        }
+    }
+}
+
+struct HomeLearningFlowScreen: View {
+    private enum Step { case meaning, photo }
+
+    @ObservedObject var flow: LearningFlow
+    let close: () -> Void
+    @State private var step: Step = .meaning
+    @State private var meaning = ""
+    @State private var image: UIImage?
+    @State private var pickerSource: PickerSource?
+    @State private var completed = false
+    @FocusState private var meaningFocused: Bool
+
+    private var trimmedMeaning: String {
+        meaning.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    var body: some View {
+        JapaneseBackground {
+            VStack(spacing: 0) {
+                header
+                ScrollView {
+                    PaperPanel {
+                        if step == .meaning { meaningStep } else { photoStep }
+                    }
+                    .padding(20)
+                }
+            }
+            .overlay {
+                if completed {
+                    Label("カルタに追加しました", systemImage: "checkmark.circle.fill")
+                        .font(.system(size: 19, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 24).padding(.vertical, 18)
+                        .background(SnaptaTheme.indigo, in: Capsule())
+                        .transition(.scale.combined(with: .opacity))
+                }
+            }
+        }
+        .sheet(item: $pickerSource) { source in
+            ImagePicker(sourceType: source.uiSource, image: $image) { _ in pickerSource = nil }
+                .ignoresSafeArea(edges: source == .camera ? .all : [])
+        }
+    }
+
+    private var header: some View {
+        HStack {
+            Button {
+                if step == .photo && image == nil {
+                    step = .meaning
+                } else {
+                    close()
+                }
+            } label: {
+                Label("戻る", systemImage: "chevron.left").frame(minHeight: 44)
+            }
+            Spacer()
+            Text(step == .meaning ? "意味を調べてみよう" : "写真を探そう")
+                .font(SnaptaTheme.mincho(20, weight: .semibold))
+                .foregroundStyle(SnaptaTheme.indigo)
+            Spacer()
+            Color.clear.frame(width: 70, height: 44)
+        }
+        .padding(.horizontal, 14)
+        .background(SnaptaTheme.paper.opacity(0.94))
+    }
+
+    private var meaningStep: some View {
+        VStack(spacing: 22) {
+            WordCard(word: flow.word, reading: flow.currentEntry.reading)
+            Text("この言葉は、どんな意味だろう？")
+                .font(.system(size: 17, weight: .bold))
+            ZStack(alignment: .topLeading) {
+                if meaning.isEmpty {
+                    Text("例）\(flow.currentEntry.meaningText)")
+                        .foregroundStyle(SnaptaTheme.ink.opacity(0.38))
+                        .padding(.horizontal, 17).padding(.vertical, 16)
+                        .allowsHitTesting(false)
+                }
+                TextEditor(text: $meaning)
+                    .scrollContentBackground(.hidden)
+                    .frame(minHeight: 125)
+                    .padding(10)
+                    .background(Color.clear)
+                    .focused($meaningFocused)
+            }
+            .background(SnaptaTheme.paper)
+            .clipShape(RoundedRectangle(cornerRadius: 7))
+            .overlay(RoundedRectangle(cornerRadius: 7).stroke(SnaptaTheme.line))
+
+            Text("辞書の文章をそのまま写さなくても大丈夫。\n自分の言葉で書いてみよう。")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(SnaptaTheme.ink.opacity(0.58))
+                .multilineTextAlignment(.center)
+
+            PrimaryButton("次へ") {
+                meaningFocused = false
+                meaning = trimmedMeaning
+                step = .photo
+            }
+            .disabled(trimmedMeaning.isEmpty)
+            .opacity(trimmedMeaning.isEmpty ? 0.4 : 1)
+        }
+    }
+
+    private var photoStep: some View {
+        VStack(spacing: 20) {
+            Text(flow.word)
+                .font(SnaptaTheme.mincho(34, weight: .semibold))
+                .foregroundStyle(SnaptaTheme.indigo)
+
+            if let image {
+                Text(meaning).font(.system(size: 16, weight: .medium))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Image(uiImage: image).resizable().scaledToFit()
+                    .frame(maxHeight: 330)
+                    .clipShape(RoundedRectangle(cornerRadius: 7))
+                PrimaryButton("この写真でカルタを作る", icon: "checkmark") { save(image) }
+                    .disabled(completed)
+                Button("撮り直す") { openCamera() }.frame(minHeight: 44)
+            } else {
+                Text("\(flow.word)をさがしてみよう")
+                    .font(SnaptaTheme.mincho(25, weight: .semibold))
+                Text("身のまわりで、この言葉に合うものを見つけてみよう。")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(SnaptaTheme.ink.opacity(0.62))
+                    .multilineTextAlignment(.center)
+                PrimaryButton("写真を撮る", icon: "camera.fill", action: openCamera)
+                Button { pickerSource = .library } label: {
+                    Label("写真から選ぶ", systemImage: "photo.on.rectangle")
+                        .font(.system(size: 17, weight: .bold))
+                        .frame(maxWidth: .infinity).frame(height: 54)
+                        .foregroundStyle(SnaptaTheme.indigo)
+                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(SnaptaTheme.indigo.opacity(0.4)))
+                }
+            }
+        }
+    }
+
+    private func openCamera() {
+        pickerSource = UIImagePickerController.isSourceTypeAvailable(.camera) ? .camera : .library
+    }
+
+    private func save(_ image: UIImage) {
+        guard !completed else { return }
+        flow.registerCurrentWord(userMeaning: meaning, image: image)
+        withAnimation(.easeOut(duration: 0.2)) { completed = true }
+        Task {
+            try? await Task.sleep(for: .milliseconds(900))
+            close()
         }
     }
 }

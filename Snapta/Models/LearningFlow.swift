@@ -68,12 +68,13 @@ final class LearningFlow: ObservableObject {
             initialEntries = Self.starterEntries
         }
         entries = initialEntries
-        currentEntryID = initialEntries[0].id
+        currentEntryID = initialEntries.first(where: { !$0.isLearned })?.id ?? initialEntries[0].id
     }
 
     var currentEntry: KarutaEntry { entries.first(where: { $0.id == currentEntryID }) ?? entries[0] }
     var word: String { currentEntry.word }
     var learnedEntries: [KarutaEntry] { entries.filter(\.isLearned) }
+    var hasUnregisteredWords: Bool { entries.contains(where: { !$0.isLearned }) }
 
     func select(_ entry: KarutaEntry) {
         currentEntryID = entry.id
@@ -116,6 +117,20 @@ final class LearningFlow: ObservableObject {
         entries[index].imageData = capturedImage.jpegData(compressionQuality: 0.82)
         entries[index].learnedAt = Date()
         persist()
+    }
+
+    /// Completes the home learning flow without creating a duplicate word entry.
+    func registerCurrentWord(userMeaning: String, image: UIImage) {
+        guard let index = entries.firstIndex(where: { $0.id == currentEntryID }) else { return }
+        entries[index].meaning = userMeaning.trimmingCharacters(in: .whitespacesAndNewlines)
+        entries[index].imageData = image.jpegData(compressionQuality: 0.82)
+        entries[index].learnedAt = Date()
+        capturedImage = image
+        persist()
+
+        if let next = entries.first(where: { !$0.isLearned }) {
+            select(next)
+        }
     }
 
     func go(_ next: LearningStep) { withAnimation(.easeInOut(duration: 0.3)) { step = next } }

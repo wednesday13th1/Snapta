@@ -20,6 +20,7 @@ struct ContentView: View {
     @StateObject private var flow = LearningFlow()
     @State private var selectedTab: AppTab = .home
     @State private var showAddFlow = false
+    @State private var showHomeLearningFlow = false
     @State private var showAddedMessage = false
 
     var body: some View {
@@ -57,12 +58,21 @@ struct ContentView: View {
                 }
             }.tint(SnaptaTheme.indigo)
         }
+        .fullScreenCover(isPresented: $showHomeLearningFlow) {
+            HomeLearningFlowScreen(flow: flow, close: { showHomeLearningFlow = false })
+                .tint(SnaptaTheme.indigo)
+        }
     }
 
     @ViewBuilder private var tabContent: some View {
         switch selectedTab {
         case .home:
-            HomeTabScreen(flow: flow, openKaruta: startKaruta, openNotebook: { selectedTab = .notebook })
+            HomeTabScreen(
+                flow: flow,
+                openKaruta: startKaruta,
+                openNotebook: { selectedTab = .notebook },
+                startLearning: { showHomeLearningFlow = true }
+            )
         case .karuta:
             KarutaLandingScreen(flow: flow, start: startKaruta)
         case .add:
