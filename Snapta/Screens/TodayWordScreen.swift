@@ -149,7 +149,7 @@ private struct AddKarutaSheet: View {
     }
 }
 
-private struct LabeledField: View {
+struct LabeledField: View {
     let label: String
     let placeholder: String
     @Binding var text: String

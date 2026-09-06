@@ -112,6 +112,29 @@ final class LearningFlow: ObservableObject {
         persist()
     }
 
+    func updateEntry(id: UUID, word: String, reading: String, meaning: String, image: UIImage?) {
+        guard let index = entries.firstIndex(where: { $0.id == id }) else { return }
+        entries[index].word = word.trimmingCharacters(in: .whitespacesAndNewlines)
+        entries[index].reading = reading.trimmingCharacters(in: .whitespacesAndNewlines)
+        entries[index].meaning = meaning.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let image { entries[index].imageData = image.jpegData(compressionQuality: 0.82) }
+        persist()
+    }
+
+    func deleteRecord(id: UUID) {
+        guard let index = entries.firstIndex(where: { $0.id == id }) else { return }
+        if entries[index].isUserCreated {
+            entries.remove(at: index)
+        } else {
+            entries[index].imageData = nil
+            entries[index].learnedAt = nil
+        }
+        if !entries.contains(where: { $0.id == currentEntryID }), let first = entries.first {
+            select(first)
+        }
+        persist()
+    }
+
     func saveCapturedImage() {
         guard let capturedImage, let index = entries.firstIndex(where: { $0.id == currentEntryID }) else { return }
         entries[index].imageData = capturedImage.jpegData(compressionQuality: 0.82)

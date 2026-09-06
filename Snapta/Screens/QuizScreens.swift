@@ -101,7 +101,7 @@ struct QuizScreen: View {
             game.questionDidFinishSpeaking()
             return
         }
-        if await speechService.speakWord(game.currentEntry) {
+        if await speechService.speakText(game.currentEntry.meaningText) {
             game.questionDidFinishSpeaking()
         }
     }
@@ -131,6 +131,19 @@ private struct KarutaGameView: View {
                         .background(SnaptaTheme.paperLight, in: Circle())
                 }.accessibilityLabel(isMuted ? "音声をオンにする" : "音声をミュート")
             }.padding(.horizontal, 18).padding(.vertical, 2)
+
+            if isMuted {
+                Text(game.currentEntry.meaningText)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(SnaptaTheme.ink.opacity(0.82))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(3)
+                    .padding(.horizontal, 14).padding(.vertical, 9)
+                    .frame(maxWidth: 300)
+                    .background(SnaptaTheme.paperLight.opacity(0.96), in: RoundedRectangle(cornerRadius: 7))
+                    .overlay(RoundedRectangle(cornerRadius: 7).stroke(SnaptaTheme.line))
+                    .accessibilityLabel("問題、\(game.currentEntry.meaningText)")
+            }
 
             GeometryReader { proxy in
                 let count = game.cards.count

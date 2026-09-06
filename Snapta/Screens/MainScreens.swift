@@ -259,70 +259,218 @@ struct KarutaLandingScreen: View {
 }
 
 struct NotebookScreen: View {
+    private enum Mode: String, CaseIterable { case list = "リスト", cards = "カード" }
     @ObservedObject var flow: LearningFlow
     @State private var selected: KarutaEntry?
-    private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+    @State private var mode: Mode = .list
+    @State private var cardIndex = 0
+    @State private var showsMeaning = false
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                ScreenHeader(title: "わたしの単語帳", subtitle: "見つけた言葉を、振り返ろう。")
-                if flow.learnedEntries.isEmpty {
-                    EmptyState(icon: "book.closed", text: "見つけた言葉はまだありません")
-                } else {
-                    LazyVGrid(columns: columns, spacing: 12) {
+        VStack(spacing: 0) {
+            VStack(spacing: 14) {
+                ScreenHeader(title: "わたしの単語帳", subtitle: "見つけた言葉を、くり返し覚えよう。")
+                Picker("表示方法", selection: $mode) {
+                    ForEach(Mode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                }.pickerStyle(.segmented)
+            }.padding(.horizontal, 20).padding(.top, 18)
+
+            if flow.learnedEntries.isEmpty {
+                EmptyState(icon: "book.closed", text: "見つけた言葉はまだありません").padding(20)
+            } else if mode == .list {
+                ScrollView {
+                    LazyVStack(spacing: 10) {
                         ForEach(flow.learnedEntries) { entry in
-                            Button { selected = entry } label: { NotebookCard(entry: entry) }.buttonStyle(.plain)
+                            Button { selected = entry } label: { NotebookListRow(entry: entry) }.buttonStyle(.plain)
                         }
                     }
+                    .padding(20)
                 }
-            }.padding(20)
+            } else {
+                NotebookStudyCard(
+                    entry: flow.learnedEntries[min(cardIndex, flow.learnedEntries.count - 1)],
+                    position: "\(min(cardIndex, flow.learnedEntries.count - 1) + 1) / \(flow.learnedEntries.count)",
+                    showsMeaning: $showsMeaning,
+                    previous: { moveCard(-1) },
+                    next: { moveCard(1) }
+                ).padding(20)
+            }
         }
         .sheet(item: $selected) { entry in
-            WordDetailScreen(entry: entry) {
-                flow.select(entry)
-                selected = nil
-                flow.go(.camera)
-            }
+            WordDetailScreen(flow: flow, entryID: entry.id, close: { selected = nil })
+        }
+        .onChange(of: mode) { _, _ in showsMeaning = false }
+    }
+
+    private func moveCard(_ offset: Int) {
+        let count = flow.learnedEntries.count
+        guard count > 0 else { return }
+        withAnimation(.easeOut(duration: 0.18)) {
+            cardIndex = (cardIndex + offset + count) % count
+            showsMeaning = false
         }
     }
 }
 
-private struct NotebookCard: View {
+private struct NotebookListRow: View {
     let entry: KarutaEntry
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        HStack(spacing: 14) {
             ZStack {
                 SnaptaTheme.moss.opacity(0.12)
                 if let image = entry.image { Image(uiImage: image).resizable().scaledToFill() }
-                else { Image(systemName: entry.symbol).font(.system(size: 34)).foregroundStyle(SnaptaTheme.indigo) }
-            }.frame(height: 125).clipped()
+                else { Image(systemName: entry.symbol).foregroundStyle(SnaptaTheme.indigo) }
+            }.frame(width: 58, height: 58).clipped().clipShape(RoundedRectangle(cornerRadius: 4))
             VStack(alignment: .leading, spacing: 2) {
                 Text(entry.reading).font(.system(size: 11, weight: .medium))
                     .foregroundStyle(SnaptaTheme.ink.opacity(0.48)).lineLimit(1).minimumScaleFactor(0.7)
-                Text(entry.word).font(SnaptaTheme.mincho(21, weight: .semibold))
+                Text(entry.word).font(SnaptaTheme.mincho(23, weight: .semibold))
                     .foregroundStyle(SnaptaTheme.ink).lineLimit(1).minimumScaleFactor(0.7)
             }
-            if let date = entry.learnedAt { Text(date.formatted(date: .numeric, time: .omitted)).font(.system(size: 10)).foregroundStyle(SnaptaTheme.ink.opacity(0.4)) }
-        }.padding(10).frame(height: 205, alignment: .top).background(SnaptaTheme.paperLight).clipShape(RoundedRectangle(cornerRadius: 5)).overlay(RoundedRectangle(cornerRadius: 5).stroke(SnaptaTheme.line))
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.right").foregroundStyle(SnaptaTheme.ink.opacity(0.3))
+        }.padding(12).frame(maxWidth: .infinity, minHeight: 82).background(SnaptaTheme.paperLight)
+            .clipShape(RoundedRectangle(cornerRadius: 5)).overlay(RoundedRectangle(cornerRadius: 5).stroke(SnaptaTheme.line))
+    }
+}
+
+private struct NotebookStudyCard: View {
+    let entry: KarutaEntry
+    let position: String
+    @Binding var showsMeaning: Bool
+    let previous: () -> Void
+    let next: () -> Void
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Text(position).font(.subheadline.weight(.bold)).foregroundStyle(SnaptaTheme.ink.opacity(0.5))
+            Button { withAnimation(.easeOut(duration: 0.16)) { showsMeaning.toggle() } } label: {
+                VStack(spacing: 14) {
+                    VStack(spacing: 4) {
+                        Text(entry.reading).font(.system(size: 14, weight: .medium)).foregroundStyle(SnaptaTheme.ink.opacity(0.5))
+                            .lineLimit(1).minimumScaleFactor(0.7)
+                        Text(entry.word).font(SnaptaTheme.mincho(42, weight: .semibold)).foregroundStyle(SnaptaTheme.indigo)
+                            .lineLimit(1).minimumScaleFactor(0.65)
+                    }
+                    if showsMeaning {
+                        Text(entry.meaningText).font(.system(size: 18, weight: .medium)).foregroundStyle(SnaptaTheme.ink)
+                            .multilineTextAlignment(.center).lineSpacing(5).fixedSize(horizontal: false, vertical: true)
+                    } else if let image = entry.image {
+                        Image(uiImage: image).resizable().scaledToFill().frame(height: 245).clipped()
+                            .clipShape(RoundedRectangle(cornerRadius: 5))
+                    }
+                    Text(showsMeaning ? "タップして写真を見る" : "タップして意味を見る")
+                        .font(.system(size: 12, weight: .medium)).foregroundStyle(SnaptaTheme.ink.opacity(0.45))
+                }.padding(24).frame(maxWidth: .infinity, minHeight: 430)
+                    .background(SnaptaTheme.paperLight).clipShape(RoundedRectangle(cornerRadius: 6))
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(SnaptaTheme.line))
+            }.buttonStyle(.plain)
+                .gesture(DragGesture(minimumDistance: 28).onEnded { value in
+                    guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                    value.translation.width < 0 ? next() : previous()
+                })
+            HStack {
+                Button(action: previous) { Label("前へ", systemImage: "chevron.left") }
+                Spacer()
+                Button(action: next) { Label("次へ", systemImage: "chevron.right").labelStyle(.titleAndIcon) }
+            }.font(.system(size: 15, weight: .bold)).foregroundStyle(SnaptaTheme.indigo).padding(.horizontal, 12)
+        }
     }
 }
 
 private struct WordDetailScreen: View {
-    let entry: KarutaEntry
-    let retry: () -> Void
+    @ObservedObject var flow: LearningFlow
+    let entryID: UUID
+    let close: () -> Void
+    @State private var editing = false
+    @State private var confirmsDelete = false
+
+    private var entry: KarutaEntry? { flow.entries.first(where: { $0.id == entryID }) }
+
     var body: some View {
         NavigationStack {
             JapaneseBackground {
                 ScrollView {
-                    PaperPanel {
-                        VStack(alignment: .leading, spacing: 18) {
-                            WordMeaningContent(entry: entry)
-                            PrimaryButton("もう一度探す", icon: "camera.fill", action: retry)
+                    if let entry { PaperPanel { WordMeaningContent(entry: entry) }.padding(20) }
+                }
+            }
+            .navigationTitle("ことばの記録").navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button(action: close) { Image(systemName: "xmark") }.accessibilityLabel("閉じる")
+                }
+                ToolbarItem(placement: .topBarTrailing) { Button("編集") { editing = true } }
+            }
+            .sheet(isPresented: $editing) {
+                if let entry {
+                    EditWordRecordScreen(flow: flow, entry: entry, close: { editing = false }, delete: {
+                        editing = false
+                        close()
+                    })
+                }
+            }
+        }
+    }
+}
+
+private struct EditWordRecordScreen: View {
+    @ObservedObject var flow: LearningFlow
+    let entry: KarutaEntry
+    let close: () -> Void
+    let delete: () -> Void
+    @State private var word: String
+    @State private var reading: String
+    @State private var meaning: String
+    @State private var image: UIImage?
+    @State private var pickerSource: PickerSource?
+    @State private var confirmsDelete = false
+
+    init(flow: LearningFlow, entry: KarutaEntry, close: @escaping () -> Void, delete: @escaping () -> Void) {
+        self.flow = flow; self.entry = entry; self.close = close; self.delete = delete
+        _word = State(initialValue: entry.word); _reading = State(initialValue: entry.reading)
+        _meaning = State(initialValue: entry.meaningText); _image = State(initialValue: entry.image)
+    }
+
+    private var canSave: Bool {
+        !word.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !reading.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+        !meaning.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    var body: some View {
+        NavigationStack {
+            JapaneseBackground {
+                ScrollView {
+                    VStack(spacing: 16) {
+                        LabeledField(label: "言葉", placeholder: "言葉", text: $word)
+                        LabeledField(label: "ふりがな", placeholder: "ふりがな", text: $reading)
+                        LabeledField(label: "自分で入力した意味", placeholder: "意味", text: $meaning)
+                        if let image {
+                            Image(uiImage: image).resizable().scaledToFill().frame(height: 210).clipped()
+                                .clipShape(RoundedRectangle(cornerRadius: 5))
                         }
+                        Button { pickerSource = UIImagePickerController.isSourceTypeAvailable(.camera) ? .camera : .library } label: {
+                            Label("写真を変更", systemImage: "camera.fill").frame(maxWidth: .infinity).frame(height: 46)
+                        }
+                        PrimaryButton("保存") {
+                            flow.updateEntry(id: entry.id, word: word, reading: reading, meaning: meaning, image: image)
+                            close()
+                        }.disabled(!canSave).opacity(canSave ? 1 : 0.4)
+                        Button("この記録を削除", role: .destructive) { confirmsDelete = true }
+                            .font(.system(size: 14, weight: .medium)).padding(.top, 18).frame(minHeight: 44)
                     }.padding(20)
                 }
-            }.navigationTitle("ことばの記録").navigationBarTitleDisplayMode(.inline)
+            }
+            .navigationTitle("記録を編集").navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .topBarLeading) { Button("キャンセル", action: close) } }
+            .sheet(item: $pickerSource) { source in
+                ImagePicker(sourceType: source.uiSource, image: $image) { _ in pickerSource = nil }
+                    .ignoresSafeArea(edges: source == .camera ? .all : [])
+            }
+            .confirmationDialog("この言葉の記録を削除しますか？", isPresented: $confirmsDelete, titleVisibility: .visible) {
+                Button("削除", role: .destructive) { flow.deleteRecord(id: entry.id); delete() }
+                Button("キャンセル", role: .cancel) {}
+            }
         }
     }
 }
