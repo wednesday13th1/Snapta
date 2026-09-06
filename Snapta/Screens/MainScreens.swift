@@ -30,24 +30,19 @@ struct HomeTabScreen: View {
                             .tracking(2)
                             .foregroundStyle(SnaptaTheme.vermilion)
 
-                        VStack(spacing: 8) {
+                        VStack(spacing: 7) {
+                            Text(flow.currentEntry.reading)
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(SnaptaTheme.ink.opacity(0.48))
+                                .lineLimit(1).minimumScaleFactor(0.7)
                             Text(flow.word)
                                 .font(SnaptaTheme.mincho(48, weight: .semibold))
                                 .tracking(5)
                                 .minimumScaleFactor(0.7)
                                 .lineLimit(1)
-                            Text(flow.currentEntry.reading)
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(SnaptaTheme.ink.opacity(0.48))
                         }
 
-                        Text(flow.currentEntry.meaningText)
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(SnaptaTheme.ink.opacity(0.7))
-                            .multilineTextAlignment(.center)
-                            .lineSpacing(5)
-
-                        PrimaryButton("この言葉をさがす", icon: "camera.fill") {
+                        PrimaryButton("言葉を探す", icon: "camera.fill") {
                             startLearning()
                         }
                     }
@@ -302,10 +297,14 @@ private struct NotebookCard: View {
                 if let image = entry.image { Image(uiImage: image).resizable().scaledToFill() }
                 else { Image(systemName: entry.symbol).font(.system(size: 34)).foregroundStyle(SnaptaTheme.indigo) }
             }.frame(height: 125).clipped()
-            Text(entry.word).font(SnaptaTheme.mincho(21, weight: .semibold)).foregroundStyle(SnaptaTheme.ink)
-            Text(entry.meaningText).font(.system(size: 12)).foregroundStyle(SnaptaTheme.ink.opacity(0.58)).lineLimit(2)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(entry.reading).font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(SnaptaTheme.ink.opacity(0.48)).lineLimit(1).minimumScaleFactor(0.7)
+                Text(entry.word).font(SnaptaTheme.mincho(21, weight: .semibold))
+                    .foregroundStyle(SnaptaTheme.ink).lineLimit(1).minimumScaleFactor(0.7)
+            }
             if let date = entry.learnedAt { Text(date.formatted(date: .numeric, time: .omitted)).font(.system(size: 10)).foregroundStyle(SnaptaTheme.ink.opacity(0.4)) }
-        }.padding(10).background(SnaptaTheme.paperLight).clipShape(RoundedRectangle(cornerRadius: 6)).overlay(RoundedRectangle(cornerRadius: 6).stroke(SnaptaTheme.line))
+        }.padding(10).frame(height: 205, alignment: .top).background(SnaptaTheme.paperLight).clipShape(RoundedRectangle(cornerRadius: 5)).overlay(RoundedRectangle(cornerRadius: 5).stroke(SnaptaTheme.line))
     }
 }
 
@@ -350,6 +349,8 @@ struct WordLibraryScreen: View {
                     PaperPanel {
                         VStack(spacing: 12) {
                             Text(entry.categoryText).font(.system(size: 11, weight: .bold)).tracking(2).foregroundStyle(SnaptaTheme.vermilion)
+                            Text(entry.reading).font(.system(size: 12, weight: .medium)).foregroundStyle(SnaptaTheme.ink.opacity(0.48))
+                                .lineLimit(1).minimumScaleFactor(0.7)
                             Text(entry.word).font(SnaptaTheme.mincho(29, weight: .semibold))
                             Text(entry.meaningText).font(.system(size: 14)).foregroundStyle(SnaptaTheme.ink.opacity(0.6)).multilineTextAlignment(.center)
                             Button { flow.select(entry); flow.go(.camera) } label: { Text("この言葉を探す").font(.system(size: 14, weight: .bold)).frame(maxWidth: .infinity).frame(height: 44).foregroundStyle(SnaptaTheme.indigo).overlay(RoundedRectangle(cornerRadius: 7).stroke(SnaptaTheme.indigo.opacity(0.4))) }
@@ -367,6 +368,7 @@ struct AddWordFlowScreen: View {
     let didAdd: () -> Void
     @State private var step = 1
     @State private var word = ""
+    @State private var reading = ""
     @State private var meaning = ""
     @State private var image: UIImage?
     @State private var pickerSource: PickerSource?
@@ -374,7 +376,9 @@ struct AddWordFlowScreen: View {
     @FocusState private var inputFocused: Bool
 
     private var canContinue: Bool {
-        !(step == 1 ? word : meaning).trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        step == 1
+            ? !word.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !reading.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            : !meaning.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var body: some View {
@@ -401,6 +405,9 @@ struct AddWordFlowScreen: View {
                                 .font(.title2).padding().background(SnaptaTheme.paper)
                                 .focused($inputFocused)
                                 .accessibilityLabel("言葉を入力")
+                            TextField("ふりがなを入力", text: $reading)
+                                .font(.body).padding().background(SnaptaTheme.paper)
+                                .accessibilityLabel("ふりがなを入力")
                         } else if step == 2 {
                             Text(word).font(SnaptaTheme.mincho(30, weight: .semibold))
                                 .multilineTextAlignment(.center)
@@ -433,7 +440,7 @@ struct AddWordFlowScreen: View {
                                     guard let image, !isSaving else { return }
                                     isSaving = true
                                     // Reuse the existing storage and timestamp (learnedAt).
-                                    flow.addEntry(word: word, reading: "", imageTitle: word, meaning: meaning, image: image)
+                                    flow.addEntry(word: word, reading: reading, imageTitle: word, meaning: meaning, image: image)
                                     didAdd()
                                 }.disabled(image == nil || isSaving)
                             }
@@ -442,6 +449,7 @@ struct AddWordFlowScreen: View {
                             PrimaryButton(step == 1 ? "意味を調べる →" : "写真を撮る →") {
                                 inputFocused = false
                                 word = word.trimmingCharacters(in: .whitespacesAndNewlines)
+                                reading = reading.trimmingCharacters(in: .whitespacesAndNewlines)
                                 meaning = meaning.trimmingCharacters(in: .whitespacesAndNewlines)
                                 step += 1
                             }.disabled(!canContinue).opacity(canContinue ? 1 : 0.4)

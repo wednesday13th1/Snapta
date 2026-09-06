@@ -7,14 +7,14 @@ struct WordMeaningContent: View {
     var body: some View {
         VStack(spacing: 22) {
             VStack(spacing: 8) {
+                if !entry.reading.isEmpty {
+                    Text(entry.reading).font(.subheadline).foregroundStyle(SnaptaTheme.ink.opacity(0.6))
+                }
                 Text(entry.word)
                     .font(SnaptaTheme.mincho(44, weight: .semibold))
                     .foregroundStyle(SnaptaTheme.indigo)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-                if !entry.reading.isEmpty {
-                    Text(entry.reading).font(.subheadline).foregroundStyle(SnaptaTheme.ink.opacity(0.6))
-                }
             }.frame(maxWidth: .infinity)
             VStack(alignment: .leading, spacing: 16) {
                 section("どんな意味かな？", text: entry.meaningText)
@@ -72,6 +72,7 @@ struct QuizScreen: View {
     @ObservedObject var flow: LearningFlow
     @StateObject private var speechService = JapaneseSpeechService()
     @StateObject private var game: KarutaGameViewModel
+    @AppStorage("snapta.karuta.isMuted") private var isMuted = false
 
     init(flow: LearningFlow) {
         self.flow = flow
@@ -83,15 +84,23 @@ struct QuizScreen: View {
             if game.phase == .finished {
                 KarutaResultView(result: game.result, close: { flow.reset() })
             } else {
-                KarutaGameView(game: game, repeatQuestion: announceQuestion)
+                KarutaGameView(game: game, isMuted: $isMuted)
             }
         }
         .task(id: game.currentEntry.id) { await speakQuestion() }
+        .onChange(of: isMuted) { _, muted in
+            if muted {
+                speechService.stop()
+                game.questionDidFinishSpeaking()
+            }
+        }
     }
 
-    private func announceQuestion() { Task { await speakQuestion() } }
-
     private func speakQuestion() async {
+        guard !isMuted else {
+            game.questionDidFinishSpeaking()
+            return
+        }
         if await speechService.speakWord(game.currentEntry) {
             game.questionDidFinishSpeaking()
         }
@@ -100,7 +109,7 @@ struct QuizScreen: View {
 
 private struct KarutaGameView: View {
     @ObservedObject var game: KarutaGameViewModel
-    let repeatQuestion: () -> Void
+    @Binding var isMuted: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
     @State private var collisionCardID: UUID?
@@ -115,10 +124,12 @@ private struct KarutaGameView: View {
                         .font(.system(size: 12, weight: .medium)).foregroundStyle(SnaptaTheme.ink.opacity(0.55))
                 }
                 Spacer()
-                Button(action: repeatQuestion) {
-                    Image(systemName: "speaker.wave.2.fill").font(.system(size: 14)).frame(width: 36, height: 36)
-                        .foregroundStyle(SnaptaTheme.indigo).background(SnaptaTheme.paperLight, in: Circle())
-                }.accessibilityLabel("問題をもう一度聞く")
+                Button { isMuted.toggle() } label: {
+                    Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                        .font(.system(size: 14)).frame(width: 36, height: 36)
+                        .foregroundStyle(isMuted ? SnaptaTheme.vermilion : SnaptaTheme.indigo)
+                        .background(SnaptaTheme.paperLight, in: Circle())
+                }.accessibilityLabel(isMuted ? "音声をオンにする" : "音声をミュート")
             }.padding(.horizontal, 18).padding(.vertical, 2)
 
             GeometryReader { proxy in
@@ -140,6 +151,7 @@ private struct KarutaGameView: View {
                             enabled: game.acceptsInput,
                             reduceMotion: reduceMotion,
                             collisionPulse: collisionCardID == entry.id,
+                            soundEnabled: !isMuted,
                             touched: { game.cardTouched(entry) },
                             submitted: { motion in handleSubmit(entry, motion: motion, index: index) }
                         )
@@ -186,11 +198,14 @@ private struct KarutaCardView: View {
                             .foregroundStyle(border.opacity(0.76))
                     }
                 }.frame(width: card.size.width, height: card.size.height * 0.64).clipped()
-                Text(entry.meaningText)
-                    .font(.system(size: 13, weight: .medium)).lineSpacing(2).lineLimit(3)
-                    .minimumScaleFactor(0.82).foregroundStyle(SnaptaTheme.ink.opacity(0.82))
-                    .padding(.horizontal, 9).padding(.vertical, 8)
-                    .frame(width: card.size.width, height: card.size.height * 0.36, alignment: .topLeading)
+                VStack(spacing: 2) {
+                    Text(entry.reading).font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(SnaptaTheme.ink.opacity(0.48))
+                    Text(entry.word).font(SnaptaTheme.mincho(20, weight: .semibold))
+                        .foregroundStyle(SnaptaTheme.ink)
+                }
+                .lineLimit(1).minimumScaleFactor(0.62).padding(.horizontal, 7)
+                .frame(width: card.size.width, height: card.size.height * 0.36)
             }
         }
         .background(SnaptaTheme.paperLight).padding(4).background(.white).padding(5).background(border)
@@ -203,7 +218,7 @@ private struct KarutaCardView: View {
             }
         }.allowsHitTesting(false) }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(entry.meaningText)の札")
+        .accessibilityLabel("\(entry.reading)、\(entry.word)の札")
         .accessibilityHint("上にスワイプして答える")
         .accessibilityAddTraits(.isButton)
     }
@@ -257,6 +272,7 @@ private struct KarutaInteractiveCard: View {
     let enabled: Bool
     let reduceMotion: Bool
     let collisionPulse: Bool
+    let soundEnabled: Bool
     let touched: () -> Void
     let submitted: (KarutaCardMotion) -> Bool?
     @GestureState private var drag = CGSize.zero
@@ -326,7 +342,7 @@ private struct KarutaInteractiveCard: View {
     private func flyAway(_ motion: KarutaCardMotion) {
         displayState = .flying
         // Trigger at the exact state change that starts the card's flight.
-        KarutaFeedback.correct()
+            KarutaFeedback.correct(playSound: soundEnabled)
         if reduceMotion {
             withAnimation(.easeOut(duration: 0.2)) { settledOffset.width = motion.direction * 50; opacity = 0 }
         } else {
@@ -381,8 +397,8 @@ private enum KarutaFeedback {
     }
 
     @MainActor
-    static func correct() {
-        FlickSoundPlayer.shared.playOnce()
+    static func correct(playSound: Bool) {
+        if playSound { FlickSoundPlayer.shared.playOnce() }
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.prepare()
         generator.impactOccurred(intensity: 0.32)

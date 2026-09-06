@@ -16,16 +16,19 @@ struct WordCard: View {
             }
             .foregroundStyle(SnaptaTheme.ink.opacity(0.66))
 
-            Text(word)
-                .font(SnaptaTheme.mincho(compact ? 28 : 46, weight: .semibold))
-                .tracking(compact ? 3 : 7)
-                .foregroundStyle(SnaptaTheme.ink)
-
-            if !compact {
+            VStack(spacing: compact ? 3 : 7) {
                 Text(reading)
-                    .font(.system(size: 13, weight: .medium))
-                    .tracking(3)
+                    .font(.system(size: compact ? 11 : 14, weight: .medium))
+                    .tracking(compact ? 1 : 3)
                     .foregroundStyle(SnaptaTheme.ink.opacity(0.5))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                Text(word)
+                    .font(SnaptaTheme.mincho(compact ? 28 : 46, weight: .semibold))
+                    .tracking(compact ? 3 : 7)
+                    .foregroundStyle(SnaptaTheme.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
             }
         }
         .frame(width: compact ? 132 : 210, height: compact ? 108 : 270)
@@ -44,7 +47,7 @@ struct WordCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 5))
         .shadow(color: SnaptaTheme.ink.opacity(0.1), radius: 9, y: 5)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("今日のことば、\(word)")
+        .accessibilityLabel("今日のことば、\(reading)、\(word)")
     }
 }
 
