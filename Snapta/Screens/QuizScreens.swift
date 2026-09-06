@@ -1,58 +1,70 @@
 import SwiftUI
 import AVFoundation
 
-private struct SelectedPhoto: View {
-    let image: UIImage?
+struct WordMeaningContent: View {
+    let entry: KarutaEntry
 
     var body: some View {
-        ZStack {
-            SnaptaTheme.paper
-            if let image {
-                Image(uiImage: image).resizable().scaledToFill()
-            } else {
-                Image(systemName: "photo").font(.system(size: 36)).foregroundStyle(SnaptaTheme.indigo.opacity(0.45))
+        VStack(spacing: 22) {
+            VStack(spacing: 8) {
+                Text(entry.word)
+                    .font(SnaptaTheme.mincho(44, weight: .semibold))
+                    .foregroundStyle(SnaptaTheme.indigo)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                if !entry.reading.isEmpty {
+                    Text(entry.reading).font(.subheadline).foregroundStyle(SnaptaTheme.ink.opacity(0.6))
+                }
+            }.frame(maxWidth: .infinity)
+            VStack(alignment: .leading, spacing: 16) {
+                section("どんな意味かな？", text: entry.meaningText)
+                if let explanation = entry.explanationText { section("もう少し知ろう", text: explanation) }
+                if let example = entry.exampleText { section("使い方も見てみよう", text: "「\(example)」") }
+                if let note = entry.note, !note.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    section("写真のメモ", text: note)
+                }
+            }
+            if let image = entry.image {
+                Image(uiImage: image).resizable().scaledToFit()
+                    .frame(maxHeight: 150)
+                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                    .accessibilityLabel("自分で見つけた\(entry.word)の写真")
             }
         }
-        .frame(maxWidth: .infinity).clipped()
-        .clipShape(RoundedRectangle(cornerRadius: 5))
-        .overlay(RoundedRectangle(cornerRadius: 5).stroke(SnaptaTheme.line))
-        .accessibilityLabel("選んだ写真")
+    }
+
+    private func section(_ title: String, text: String) -> some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text(title).font(.subheadline.weight(.bold)).foregroundStyle(SnaptaTheme.moss)
+            Text(text).font(.body).foregroundStyle(SnaptaTheme.ink).lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
+        }.frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
 struct SavedScreen: View {
     @ObservedObject var flow: LearningFlow
-    @State private var appeared = false
-    @State private var note = ""
 
     var body: some View {
         ScrollView {
-            PaperPanel {
-                VStack(spacing: 22) {
-                    SelectedPhoto(image: flow.capturedImage).frame(height: 190)
-                    ZStack {
-                        Circle().fill(SnaptaTheme.moss.opacity(0.14)).frame(width: 70, height: 70)
-                        Image(systemName: "checkmark").font(.system(size: 28, weight: .medium)).foregroundStyle(SnaptaTheme.moss)
-                    }
-                    .scaleEffect(appeared ? 1 : 0.8)
-                    Text("写真の札ができました")
+            VStack(spacing: 22) {
+                VStack(spacing: 10) {
+                    Text("まずは、この言葉を知ってみよう！")
                         .font(SnaptaTheme.mincho(22, weight: .semibold))
-                    Text("どうしてこれが「\(flow.word)」だと思った？")
-                        .font(.system(size: 15, weight: .bold)).multilineTextAlignment(.center)
-                    TextField("短い言葉で書いてみよう", text: $note, axis: .vertical)
-                        .lineLimit(2...4).padding(14).background(SnaptaTheme.paper)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                    PrimaryButton("単語帳に保存", icon: "book.closed.fill") {
-                        flow.updateNote(note)
-                        flow.go(.quiz)
-                    }
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 4)
-            .padding(.bottom, 30)
+                        .foregroundStyle(SnaptaTheme.indigo)
+                    Text("意味や使い方を見てから、カルタに挑戦しよう。")
+                        .font(.subheadline).foregroundStyle(SnaptaTheme.ink.opacity(0.65))
+                }.multilineTextAlignment(.center)
+                PaperPanel { WordMeaningContent(entry: flow.currentEntry) }
+            }.padding(.horizontal, 20).padding(.vertical, 24)
         }
-        .onAppear { withAnimation(.easeOut(duration: 0.35)) { appeared = true } }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            PrimaryButton("意味がわかった！カルタへ", icon: "rectangle.stack.fill") {
+                flow.go(.quiz)
+            }
+            .padding(.horizontal, 20).padding(.vertical, 12)
+            .background(SnaptaTheme.paper)
+        }
     }
 }
 
@@ -97,7 +109,7 @@ private struct KarutaGameView: View {
         VStack(spacing: 3) {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(game.phase == .listening ? "よく聞いて…" : "意味と写真から札を探そう")
+                    Text(game.phase == .listening ? "よく聞いて…" : "正しい札を見つけよう！")
                         .font(SnaptaTheme.mincho(17, weight: .semibold))
                     Text(voiceOver ? "札を選び、上にスワイプして答えます" : "札を横へすばやく払おう")
                         .font(.system(size: 12, weight: .medium)).foregroundStyle(SnaptaTheme.ink.opacity(0.55))

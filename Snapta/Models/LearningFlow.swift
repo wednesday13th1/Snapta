@@ -16,12 +16,23 @@ struct KarutaEntry: Identifiable, Codable, Equatable {
     var note: String?
     var learnedAt: Date?
     var example: String?
+    var explanation: String?
 
     var image: UIImage? { imageData.flatMap(UIImage.init(data:)) }
     var meaningText: String {
         meaning.flatMap { $0.isEmpty ? nil : $0 }
             ?? note.flatMap { $0.isEmpty ? nil : $0 }
             ?? imageTitle
+    }
+    private var starter: KarutaEntry? {
+        guard !isUserCreated else { return nil }
+        return LearningFlow.starterEntries.first { $0.word == word }
+    }
+    var explanationText: String? { nonempty(explanation) ?? nonempty(starter?.explanation) }
+    var exampleText: String? { nonempty(example) ?? nonempty(starter?.example) }
+    private func nonempty(_ text: String?) -> String? {
+        guard let value = text?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else { return nil }
+        return value
     }
     var categoryText: String { category.flatMap { $0.isEmpty ? nil : $0 } ?? "理科" }
     var isLearned: Bool { imageData != nil }
@@ -38,14 +49,14 @@ final class LearningFlow: ObservableObject {
     @Published var quizCompleted = false
 
     private let storageKey = "snapta.karuta.entries.v1"
-    static let starterEntries = [
-        KarutaEntry(word: "反射", reading: "はんしゃ", imageTitle: "水たまり", symbol: "drop.fill", meaning: "光がものに当たって、はね返ること。", category: "理科", example: "鏡に光が反射する。"),
-        KarutaEntry(word: "蒸発", reading: "じょうはつ", imageTitle: "湯気", symbol: "cloud.fill", meaning: "液体が気体に変わること。", category: "理科"),
-        KarutaEntry(word: "対称", reading: "たいしょう", imageTitle: "ちょう", symbol: "butterfly.fill", meaning: "折ったとき、形がぴったり重なること。", category: "算数・数学"),
-        KarutaEntry(word: "循環", reading: "じゅんかん", imageTitle: "水のめぐり", symbol: "arrow.triangle.2.circlepath", meaning: "ひとめぐりして、また元へ戻ること。", category: "理科"),
-        KarutaEntry(word: "摩擦", reading: "まさつ", imageTitle: "こする手", symbol: "hands.sparkles.fill", meaning: "ものの動きをさまたげる力。", category: "理科"),
-        KarutaEntry(word: "透明", reading: "とうめい", imageTitle: "ガラス", symbol: "square.on.square", meaning: "向こう側が透けて見えること。", category: "身の回り"),
-        KarutaEntry(word: "重力", reading: "じゅうりょく", imageTitle: "落ちるりんご", symbol: "arrow.down", meaning: "ものを地面の方へ引っぱる力。", category: "理科")
+    nonisolated static let starterEntries = [
+        KarutaEntry(word: "反射", reading: "はんしゃ", imageTitle: "水たまり", symbol: "drop.fill", meaning: "光がものに当たって、はね返ること。", category: "理科", example: "鏡に光が当たると、光が反射する。", explanation: "鏡に顔が映るのも、光がはね返るからだよ。"),
+        KarutaEntry(word: "蒸発", reading: "じょうはつ", imageTitle: "湯気", symbol: "cloud.fill", meaning: "液体が気体に変わること。", category: "理科", example: "ぬれた服の水が蒸発して、服がかわく。", explanation: "水は、目に見えない水じょう気になって空気にまざるよ。"),
+        KarutaEntry(word: "対称", reading: "たいしょう", imageTitle: "ちょう", symbol: "butterfly.fill", meaning: "折ったとき、形がぴったり重なること。", category: "算数・数学", example: "このハートは、左右対称の形だ。", explanation: "左右対称の形は、真ん中で折ると両側がぴったり重なるよ。"),
+        KarutaEntry(word: "循環", reading: "じゅんかん", imageTitle: "水のめぐり", symbol: "arrow.triangle.2.circlepath", meaning: "ひとめぐりして、また元へ戻ること。", category: "理科", example: "体の中を血液が循環している。", explanation: "同じ道すじを、ぐるぐるめぐることだよ。"),
+        KarutaEntry(word: "摩擦", reading: "まさつ", imageTitle: "こする手", symbol: "hands.sparkles.fill", meaning: "ものの動きをさまたげる力。", category: "理科", example: "手をこすると、摩擦であたたかくなる。", explanation: "ものがふれ合うと、すべりにくくなるよ。"),
+        KarutaEntry(word: "透明", reading: "とうめい", imageTitle: "ガラス", symbol: "square.on.square", meaning: "向こう側が透けて見えること。", category: "身の回り", example: "透明なコップの中に、水を入れる。", explanation: "ガラスのように、光を通して向こうのものが見えるよ。"),
+        KarutaEntry(word: "重力", reading: "じゅうりょく", imageTitle: "落ちるりんご", symbol: "arrow.down", meaning: "ものを地面の方へ引っぱる力。", category: "理科", example: "ボールが重力で地面に落ちる。", explanation: "手をはなしたものが落ちるのは、地球に引っぱられるからだよ。")
     ]
 
     init() {
@@ -69,25 +80,25 @@ final class LearningFlow: ObservableObject {
         capturedImage = entry.image
     }
 
-    func addWord(word: String, reading: String, meaning: String, category: String) {
+    func addWord(word: String, reading: String, meaning: String, category: String, explanation: String = "", example: String = "") {
         let entry = KarutaEntry(
             word: word.trimmingCharacters(in: .whitespacesAndNewlines),
             reading: reading.trimmingCharacters(in: .whitespacesAndNewlines),
             imageTitle: "自分で見つけた写真", symbol: "viewfinder", isUserCreated: true,
-            meaning: meaning.trimmingCharacters(in: .whitespacesAndNewlines), category: category
+            meaning: meaning.trimmingCharacters(in: .whitespacesAndNewlines), category: category, example: example, explanation: explanation
         )
         entries.append(entry)
         select(entry)
         persist()
     }
 
-    func addEntry(word: String, reading: String, imageTitle: String, meaning: String, image: UIImage) {
+    func addEntry(word: String, reading: String, imageTitle: String, meaning: String, image: UIImage, explanation: String = "", example: String = "") {
         let entry = KarutaEntry(
             word: word.trimmingCharacters(in: .whitespacesAndNewlines),
             reading: reading.trimmingCharacters(in: .whitespacesAndNewlines),
             imageTitle: imageTitle.trimmingCharacters(in: .whitespacesAndNewlines), symbol: "photo.fill",
             imageData: image.jpegData(compressionQuality: 0.82), isUserCreated: true,
-            meaning: meaning.trimmingCharacters(in: .whitespacesAndNewlines), category: "身の回り", learnedAt: Date()
+            meaning: meaning.trimmingCharacters(in: .whitespacesAndNewlines), category: "身の回り", learnedAt: Date(), example: example, explanation: explanation
         )
         entries.append(entry)
         select(entry)

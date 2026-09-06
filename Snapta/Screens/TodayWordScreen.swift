@@ -92,6 +92,8 @@ private struct AddKarutaSheet: View {
     @State private var reading = ""
     @State private var imageTitle = ""
     @State private var meaning = ""
+    @State private var explanation = ""
+    @State private var example = ""
     @State private var photoItem: PhotosPickerItem?
     @State private var image: UIImage?
 
@@ -122,10 +124,13 @@ private struct AddKarutaSheet: View {
                             LabeledField(label: "よみかた", placeholder: "例：くっせつ", text: $reading)
                             LabeledField(label: "画像の名前", placeholder: "例：水の中のストロー", text: $imageTitle)
                             LabeledField(label: "ことばの意味", placeholder: "短く、わかりやすい意味", text: $meaning)
-                            PrimaryButton("ことば札を追加", icon: "plus") {
+                            LabeledField(label: "短い説明（あれば）", placeholder: "もう少しくわしく", text: $explanation)
+                            LabeledField(label: "例文（あれば）", placeholder: "この言葉を使った短い文", text: $example)
+                            PrimaryButton("保存して意味を見る", icon: "plus") {
                                 guard let image else { return }
-                                flow.addEntry(word: word, reading: reading, imageTitle: imageTitle.isEmpty ? "登録した写真" : imageTitle, meaning: meaning, image: image)
+                                flow.addEntry(word: word, reading: reading, imageTitle: imageTitle.isEmpty ? "登録した写真" : imageTitle, meaning: meaning, image: image, explanation: explanation, example: example)
                                 isPresented = false
+                                flow.go(.saved)
                             }
                             .disabled(!canSave).opacity(canSave ? 1 : 0.45)
                         }

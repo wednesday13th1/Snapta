@@ -20,6 +20,7 @@ struct ContentView: View {
     @StateObject private var flow = LearningFlow()
     @State private var selectedTab: AppTab = .home
     @State private var showAddFlow = false
+    @State private var showAddedMessage = false
 
     var body: some View {
         JapaneseBackground {
@@ -31,11 +32,28 @@ struct ContentView: View {
             }
         }
         .tint(SnaptaTheme.indigo)
+        .overlay(alignment: .top) {
+            if showAddedMessage {
+                Text("カルタに追加したよ！")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(SnaptaTheme.indigo)
+                    .padding(14).background(SnaptaTheme.paperLight, in: Capsule())
+                    .padding(.top, 8)
+                    .accessibilityAddTraits(.updatesFrequently)
+            }
+        }
+        .task(id: showAddedMessage) {
+            guard showAddedMessage else { return }
+            do { try await Task.sleep(for: .seconds(3)) } catch { return }
+            showAddedMessage = false
+        }
         .fullScreenCover(isPresented: $showAddFlow) {
             JapaneseBackground {
                 AddWordFlowScreen(flow: flow, cancel: { showAddFlow = false }) {
                     showAddFlow = false
-                    flow.go(.camera)
+                    flow.reset()
+                    selectedTab = .notebook
+                    showAddedMessage = true
                 }
             }.tint(SnaptaTheme.indigo)
         }
@@ -56,7 +74,7 @@ struct ContentView: View {
 
     private var learningFlow: some View {
         VStack(spacing: 0) {
-            FlowHeader(title: flow.step == .camera ? "探して撮る" : flow.step == .quiz ? "ことばかるた" : "ことばの記録") {
+            FlowHeader(title: flow.step == .camera ? "探して撮る" : flow.step == .quiz ? "ことばかるた" : flow.step == .saved ? "言葉を知ろう" : "ことばの記録") {
                 flow.reset()
             }
             Group {

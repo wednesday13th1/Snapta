@@ -44,7 +44,7 @@ struct CameraScreen: View {
     }
 }
 
-private enum PickerSource: String, Identifiable {
+enum PickerSource: String, Identifiable {
     case camera, library
     var id: String { rawValue }
     var uiSource: UIImagePickerController.SourceType { self == .camera ? .camera : .photoLibrary }
@@ -86,7 +86,7 @@ private struct CameraPreviewPlaceholder: View {
     }
 }
 
-private struct ImagePicker: UIViewControllerRepresentable {
+struct ImagePicker: UIViewControllerRepresentable {
     let sourceType: UIImagePickerController.SourceType
     @Binding var image: UIImage?
     let onComplete: (Bool) -> Void
