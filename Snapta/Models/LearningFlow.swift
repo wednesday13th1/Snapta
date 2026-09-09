@@ -76,6 +76,14 @@ final class LearningFlow: ObservableObject {
     var learnedEntries: [KarutaEntry] { entries.filter(\.isLearned) }
     var hasUnregisteredWords: Bool { entries.contains(where: { !$0.isLearned }) }
 
+    @discardableResult
+    func selectNextUnregisteredWord() -> Bool {
+        guard let next = entries.first(where: { !$0.isLearned && $0.id != currentEntryID })
+                ?? entries.first(where: { !$0.isLearned }) else { return false }
+        select(next)
+        return true
+    }
+
     func select(_ entry: KarutaEntry) {
         currentEntryID = entry.id
         capturedImage = entry.image
@@ -151,9 +159,7 @@ final class LearningFlow: ObservableObject {
         capturedImage = image
         persist()
 
-        if let next = entries.first(where: { !$0.isLearned }) {
-            select(next)
-        }
+        selectNextUnregisteredWord()
     }
 
     func go(_ next: LearningStep) { withAnimation(.easeInOut(duration: 0.3)) { step = next } }

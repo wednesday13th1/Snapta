@@ -52,6 +52,7 @@ struct ContentView: View {
             JapaneseBackground {
                 AddWordFlowScreen(flow: flow, cancel: { showAddFlow = false }) {
                     showAddFlow = false
+                    flow.selectNextUnregisteredWord()
                     flow.reset()
                     selectedTab = .notebook
                     showAddedMessage = true
