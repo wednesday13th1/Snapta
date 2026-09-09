@@ -240,6 +240,7 @@ private struct KarutaCardView: View {
 private struct KarutaCardMotion {
     let direction: CGFloat
     let speed: CGFloat
+    let horizontalTranslation: CGFloat
     let destination: CGFloat
     let duration: Double
     let rotation: Double
@@ -250,6 +251,7 @@ private struct KarutaCardMotion {
         let horizontalSpeed = abs(projected) * 7.5
         direction = (abs(value.predictedEndTranslation.width) > 1 ? value.predictedEndTranslation.width : value.translation.width) >= 0 ? 1 : -1
         speed = horizontalSpeed
+        horizontalTranslation = value.translation.width
         destination = min(900, max(210, abs(value.predictedEndTranslation.width) + horizontalSpeed * 0.22)) * direction
         duration = min(0.42, max(0.18, 0.44 - Double(horizontalSpeed / 4_500)))
         rotation = Double(direction) * min(11, max(3, Double(horizontalSpeed / 150)))
@@ -258,21 +260,16 @@ private struct KarutaCardMotion {
     init(accessibilityDirection: CGFloat) {
         direction = accessibilityDirection
         speed = 900
+        horizontalTranslation = accessibilityDirection * 120
         destination = accessibilityDirection * 520
         duration = 0.28
         rotation = Double(accessibilityDirection) * 6
     }
 
 
-    init(tapDirection: CGFloat, boardWidth: CGFloat) {
-        direction = tapDirection
-        speed = 1_150
-        destination = tapDirection * max(360, boardWidth * 1.05)
-        duration = 0.27
-        rotation = Double(tapDirection) * 8
+    var isDeliberateSwipe: Bool {
+        abs(horizontalTranslation) >= 44 || (speed > 230 && destination.magnitude > 220)
     }
-
-    var isDeliberateSwipe: Bool { speed > 230 && destination.magnitude > 220 }
 }
 
 private struct KarutaInteractiveCard: View {
@@ -319,7 +316,7 @@ private struct KarutaInteractiveCard: View {
     }
 
     private var dragGesture: some Gesture {
-        DragGesture(minimumDistance: 0, coordinateSpace: .local)
+        DragGesture(minimumDistance: 8, coordinateSpace: .local)
             .updating($pressing) { _, state, _ in state = true }
             .updating($drag) { value, state, _ in state = value.translation }
             .onChanged { _ in
@@ -333,9 +330,6 @@ private struct KarutaInteractiveCard: View {
                 let motion = KarutaCardMotion(value: value)
                 if motion.isDeliberateSwipe {
                     resolve(motion)
-                } else if abs(value.translation.width) < 14 && abs(value.translation.height) < 14 {
-                    let direction: CGFloat = placement.offset.width < -8 ? -1 : placement.offset.width > 8 ? 1 : (entry.id.hashValue.isMultiple(of: 2) ? -1 : 1)
-                    resolve(KarutaCardMotion(tapDirection: direction, boardWidth: boardWidth), pressDelay: true)
                 } else {
                     returnHome()
                 }

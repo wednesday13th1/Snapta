@@ -145,12 +145,14 @@ struct HomeLearningFlowScreen: View {
                         .padding(.horizontal, 17).padding(.vertical, 16)
                         .allowsHitTesting(false)
                 }
-                TextEditor(text: $meaning)
-                    .scrollContentBackground(.hidden)
+                TextField("", text: $meaning, axis: .vertical)
+                    .lineLimit(4...7)
                     .frame(minHeight: 125)
                     .padding(10)
                     .background(Color.clear)
                     .focused($meaningFocused)
+                    .submitLabel(.done)
+                    .onSubmit { dismissMeaningKeyboard() }
             }
             .background(SnaptaTheme.paper)
             .clipShape(RoundedRectangle(cornerRadius: 7))
@@ -169,6 +171,17 @@ struct HomeLearningFlowScreen: View {
             .disabled(trimmedMeaning.isEmpty)
             .opacity(trimmedMeaning.isEmpty ? 0.4 : 1)
         }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("閉じる") { dismissMeaningKeyboard() }
+            }
+        }
+    }
+
+    private func dismissMeaningKeyboard() {
+        meaning = trimmedMeaning
+        meaningFocused = false
     }
 
     private var photoStep: some View {
@@ -617,6 +630,8 @@ struct AddWordFlowScreen: View {
                             TextField("意味を入力", text: $meaning, axis: .vertical)
                                 .lineLimit(3...5).padding().background(SnaptaTheme.paper)
                                 .focused($inputFocused)
+                                .submitLabel(.done)
+                                .onSubmit { dismissInputKeyboard() }
                                 .accessibilityLabel("意味を入力")
                         } else {
                             if let image {
@@ -667,6 +682,17 @@ struct AddWordFlowScreen: View {
             }
             .ignoresSafeArea(edges: source == .camera ? .all : [])
         }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("閉じる") { dismissInputKeyboard() }
+            }
+        }
+    }
+
+    private func dismissInputKeyboard() {
+        meaning = meaning.trimmingCharacters(in: .whitespacesAndNewlines)
+        inputFocused = false
     }
 
     private func openCamera() {
