@@ -287,13 +287,17 @@ struct NotebookScreen: View {
                     .padding(20)
                 }
             } else {
-                NotebookStudyCard(
-                    entry: flow.learnedEntries[min(cardIndex, flow.learnedEntries.count - 1)],
-                    position: "\(min(cardIndex, flow.learnedEntries.count - 1) + 1) / \(flow.learnedEntries.count)",
-                    showsMeaning: $showsMeaning,
-                    previous: { moveCard(-1) },
-                    next: { moveCard(1) }
-                ).padding(20)
+                GeometryReader { proxy in
+                    NotebookStudyCard(
+                        entry: flow.learnedEntries[min(cardIndex, flow.learnedEntries.count - 1)],
+                        position: "\(min(cardIndex, flow.learnedEntries.count - 1) + 1) / \(flow.learnedEntries.count)",
+                        showsMeaning: $showsMeaning,
+                        previous: { moveCard(-1) },
+                        next: { moveCard(1) }
+                    )
+                    .padding(20)
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                }
             }
         }
         .sheet(item: $selected) { entry in
@@ -322,9 +326,9 @@ private struct NotebookListRow: View {
                 else { Image(systemName: entry.symbol).foregroundStyle(SnaptaTheme.indigo) }
             }.frame(width: 58, height: 58).clipped().clipShape(RoundedRectangle(cornerRadius: 4))
             VStack(alignment: .leading, spacing: 2) {
-                Text(entry.reading).font(.system(size: 11, weight: .medium))
+                Text(entry.reading).font(.system(size: 14, weight: .medium))
                     .foregroundStyle(SnaptaTheme.ink.opacity(0.48)).lineLimit(1).minimumScaleFactor(0.7)
-                Text(entry.word).font(SnaptaTheme.mincho(23, weight: .semibold))
+                Text(entry.word).font(SnaptaTheme.mincho(25, weight: .semibold))
                     .foregroundStyle(SnaptaTheme.ink).lineLimit(1).minimumScaleFactor(0.7)
             }
             Spacer(minLength: 8)
@@ -343,28 +347,48 @@ private struct NotebookStudyCard: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            Text(position).font(.subheadline.weight(.bold)).foregroundStyle(SnaptaTheme.ink.opacity(0.5))
+            Text(position).font(.system(size: 16, weight: .bold)).foregroundStyle(SnaptaTheme.ink.opacity(0.5))
             Button { withAnimation(.easeOut(duration: 0.16)) { showsMeaning.toggle() } } label: {
                 VStack(spacing: 14) {
                     VStack(spacing: 4) {
-                        Text(entry.reading).font(.system(size: 14, weight: .medium)).foregroundStyle(SnaptaTheme.ink.opacity(0.5))
+                        Text(entry.reading).font(.system(size: 17, weight: .medium)).foregroundStyle(SnaptaTheme.ink.opacity(0.5))
                             .lineLimit(1).minimumScaleFactor(0.7)
-                        Text(entry.word).font(SnaptaTheme.mincho(42, weight: .semibold)).foregroundStyle(SnaptaTheme.indigo)
+                        Text(entry.word).font(SnaptaTheme.mincho(46, weight: .semibold)).foregroundStyle(SnaptaTheme.indigo)
                             .lineLimit(1).minimumScaleFactor(0.65)
                     }
-                    if showsMeaning {
-                        Text(entry.meaningText).font(.system(size: 18, weight: .medium)).foregroundStyle(SnaptaTheme.ink)
-                            .multilineTextAlignment(.center).lineSpacing(5).fixedSize(horizontal: false, vertical: true)
-                    } else if let image = entry.image {
-                        Image(uiImage: image).resizable().scaledToFill().frame(height: 245).clipped()
-                            .clipShape(RoundedRectangle(cornerRadius: 5))
+                    ZStack {
+                        Group {
+                            if let image = entry.image {
+                                Image(uiImage: image).resizable().scaledToFill()
+                            } else {
+                                ZStack {
+                                    SnaptaTheme.moss.opacity(0.12)
+                                    Image(systemName: entry.symbol)
+                                        .font(.system(size: 58, weight: .light))
+                                        .foregroundStyle(SnaptaTheme.indigo.opacity(0.65))
+                                }
+                            }
+                        }
+                        .opacity(showsMeaning ? 0 : 1)
+
+                        Text(entry.meaningText)
+                            .font(.system(size: 20, weight: .semibold))
+                            .foregroundStyle(SnaptaTheme.ink)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(7)
+                            .minimumScaleFactor(0.75)
+                            .padding(20)
+                            .opacity(showsMeaning ? 1 : 0)
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: 5))
                     Text(showsMeaning ? "タップして写真を見る" : "タップして意味を見る")
-                        .font(.system(size: 12, weight: .medium)).foregroundStyle(SnaptaTheme.ink.opacity(0.45))
-                }.padding(24).frame(maxWidth: .infinity, minHeight: 430)
+                        .font(.system(size: 15, weight: .semibold)).foregroundStyle(SnaptaTheme.ink.opacity(0.55))
+                }.padding(20).frame(maxWidth: .infinity, maxHeight: .infinity)
                     .background(SnaptaTheme.paperLight).clipShape(RoundedRectangle(cornerRadius: 6))
                     .overlay(RoundedRectangle(cornerRadius: 6).stroke(SnaptaTheme.line))
-            }.buttonStyle(.plain)
+            }.buttonStyle(.plain).frame(maxHeight: .infinity)
                 .gesture(DragGesture(minimumDistance: 28).onEnded { value in
                     guard abs(value.translation.width) > abs(value.translation.height) else { return }
                     value.translation.width < 0 ? next() : previous()
@@ -373,7 +397,7 @@ private struct NotebookStudyCard: View {
                 Button(action: previous) { Label("前へ", systemImage: "chevron.left") }
                 Spacer()
                 Button(action: next) { Label("次へ", systemImage: "chevron.right").labelStyle(.titleAndIcon) }
-            }.font(.system(size: 15, weight: .bold)).foregroundStyle(SnaptaTheme.indigo).padding(.horizontal, 12)
+            }.font(.system(size: 17, weight: .bold)).foregroundStyle(SnaptaTheme.indigo).padding(.horizontal, 12)
         }
     }
 }
@@ -391,7 +415,7 @@ private struct WordDetailScreen: View {
         NavigationStack {
             JapaneseBackground {
                 ScrollView {
-                    if let entry { PaperPanel { WordMeaningContent(entry: entry) }.padding(20) }
+                    if let entry { PaperPanel { NotebookDetailContent(entry: entry) }.padding(20) }
                 }
             }
             .navigationTitle("ことばの記録").navigationBarTitleDisplayMode(.inline)
@@ -410,6 +434,37 @@ private struct WordDetailScreen: View {
                 }
             }
         }
+    }
+}
+
+private struct NotebookDetailContent: View {
+    let entry: KarutaEntry
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Text(entry.word)
+                .font(SnaptaTheme.mincho(46, weight: .semibold))
+                .foregroundStyle(SnaptaTheme.indigo)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let image = entry.image {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxHeight: 280)
+                    .clipShape(RoundedRectangle(cornerRadius: 7))
+                    .accessibilityLabel("\(entry.word)の写真")
+            }
+
+            Text(entry.meaningText)
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(SnaptaTheme.ink)
+                .multilineTextAlignment(.center)
+                .lineSpacing(7)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 
