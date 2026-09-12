@@ -86,10 +86,10 @@
 				};
 			};
 			buildConfigurationList = A0000000000000000000000B /* Build configuration list for PBXProject "Snapta" */;
-			developmentRegion = en;
+			developmentRegion = ja;
 			hasScannedForEncodings = 0;
 			knownRegions = (
-				en,
+				ja,
 				Base,
 			);
 			mainGroup = A00000000000000000000003;
