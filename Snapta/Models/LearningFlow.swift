@@ -48,7 +48,8 @@ final class LearningFlow: ObservableObject {
     @Published var quizMessage: String?
     @Published var quizCompleted = false
 
-    private let storageKey = "snapta.karuta.entries.v1"
+    private static let legacyStorageKey = "snapta.karuta.entries.v1"
+    private static let storageFileName = "karuta-entries-v1.json"
     nonisolated static let starterEntries = [
         KarutaEntry(word: "反射", reading: "はんしゃ", imageTitle: "水たまり", symbol: "drop.fill", meaning: "光がものに当たって、はね返ること。", category: "理科", example: "鏡に光が当たると、光が反射する。", explanation: "鏡に顔が映るのも、光がはね返るからだよ。"),
         KarutaEntry(word: "蒸発", reading: "じょうはつ", imageTitle: "湯気", symbol: "cloud.fill", meaning: "液体が気体に変わること。", category: "理科", example: "ぬれた服の水が蒸発して、服がかわく。", explanation: "水は、目に見えない水じょう気になって空気にまざるよ。"),
@@ -61,8 +62,7 @@ final class LearningFlow: ObservableObject {
 
     init() {
         let initialEntries: [KarutaEntry]
-        if let data = UserDefaults.standard.data(forKey: storageKey),
-           let saved = try? JSONDecoder().decode([KarutaEntry].self, from: data), !saved.isEmpty {
+        if let saved = Self.loadSavedEntries(), !saved.isEmpty {
             initialEntries = saved
         } else {
             initialEntries = Self.starterEntries
@@ -188,6 +188,50 @@ final class LearningFlow: ObservableObject {
         quizCompleted = false
     }
     private func persist() {
-        if let data = try? JSONEncoder().encode(entries) { UserDefaults.standard.set(data, forKey: storageKey) }
+        guard let data = try? JSONEncoder().encode(entries),
+              let storageURL = Self.storageURL else { return }
+        do {
+            try FileManager.default.createDirectory(
+                at: storageURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try data.write(to: storageURL, options: .atomic)
+            UserDefaults.standard.removeObject(forKey: Self.legacyStorageKey)
+        } catch {
+            assertionFailure("Failed to save karuta entries: \(error.localizedDescription)")
+        }
+    }
+
+    private static var storageURL: URL? {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("Snapta", isDirectory: true)
+            .appendingPathComponent(storageFileName, isDirectory: false)
+    }
+
+    private static func loadSavedEntries() -> [KarutaEntry]? {
+        if let storageURL,
+           let data = try? Data(contentsOf: storageURL),
+           let saved = try? JSONDecoder().decode([KarutaEntry].self, from: data) {
+            return saved
+        }
+
+        guard let legacyData = UserDefaults.standard.data(forKey: legacyStorageKey),
+              let saved = try? JSONDecoder().decode([KarutaEntry].self, from: legacyData) else {
+            return nil
+        }
+
+        if let storageURL {
+            do {
+                try FileManager.default.createDirectory(
+                    at: storageURL.deletingLastPathComponent(),
+                    withIntermediateDirectories: true
+                )
+                try legacyData.write(to: storageURL, options: .atomic)
+                UserDefaults.standard.removeObject(forKey: legacyStorageKey)
+            } catch {
+                // Keep the legacy value so migration can be retried without losing data.
+            }
+        }
+        return saved
     }
 }
