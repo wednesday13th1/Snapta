@@ -48,6 +48,8 @@ final class LearningFlow: ObservableObject {
     @Published var quizMessage: String?
     @Published var quizCompleted = false
 
+    let dailyProgress: DailyProgressManager
+
     private static let legacyStorageKey = "snapta.karuta.entries.v1"
     private static let storageFileName = "karuta-entries-v1.json"
     nonisolated static let starterEntries = [
@@ -60,7 +62,8 @@ final class LearningFlow: ObservableObject {
         KarutaEntry(word: "重力", reading: "じゅうりょく", imageTitle: "落ちるりんご", symbol: "arrow.down", meaning: "ものを地面の方へ引っぱる力。", category: "理科", example: "ボールが重力で地面に落ちる。", explanation: "手をはなしたものが落ちるのは、地球に引っぱられるからだよ。")
     ]
 
-    init() {
+    init(dailyProgress: DailyProgressManager) {
+        self.dailyProgress = dailyProgress
         let initialEntries: [KarutaEntry]
         if let saved = Self.loadSavedEntries(), !saved.isEmpty {
             initialEntries = saved
@@ -68,7 +71,15 @@ final class LearningFlow: ObservableObject {
             initialEntries = Self.starterEntries
         }
         entries = initialEntries
-        currentEntryID = initialEntries.first(where: { !$0.isLearned })?.id ?? initialEntries[0].id
+        let savedDailyWordID = dailyProgress.currentDailyWordID
+        currentEntryID = initialEntries.first(where: { $0.id == savedDailyWordID && !$0.isLearned })?.id
+            ?? initialEntries.first(where: { !$0.isLearned })?.id
+            ?? initialEntries[0].id
+        if initialEntries.contains(where: { $0.id == currentEntryID && !$0.isLearned }) {
+            dailyProgress.setCurrentDailyWordID(currentEntryID)
+        } else {
+            dailyProgress.setCurrentDailyWordID(nil)
+        }
     }
 
     var currentEntry: KarutaEntry { entries.first(where: { $0.id == currentEntryID }) ?? entries[0] }
@@ -81,7 +92,14 @@ final class LearningFlow: ObservableObject {
         guard let next = entries.first(where: { !$0.isLearned && $0.id != currentEntryID })
                 ?? entries.first(where: { !$0.isLearned }) else { return false }
         select(next)
+        dailyProgress.setCurrentDailyWordID(next.id)
         return true
+    }
+
+    func refreshDailyWordForNewDay() {
+        if !selectNextUnregisteredWord() {
+            dailyProgress.setCurrentDailyWordID(nil)
+        }
     }
 
     func select(_ entry: KarutaEntry) {
@@ -151,15 +169,19 @@ final class LearningFlow: ObservableObject {
     }
 
     /// Completes the home learning flow without creating a duplicate word entry.
-    func registerCurrentWord(userMeaning: String, image: UIImage) {
-        guard let index = entries.firstIndex(where: { $0.id == currentEntryID }) else { return }
+    @discardableResult
+    func registerCurrentWord(userMeaning: String, image: UIImage) -> Bool {
+        guard let index = entries.firstIndex(where: { $0.id == currentEntryID }) else { return false }
         entries[index].meaning = userMeaning.trimmingCharacters(in: .whitespacesAndNewlines)
         entries[index].imageData = image.jpegData(compressionQuality: 0.82)
         entries[index].learnedAt = Date()
         capturedImage = image
-        persist()
-
-        selectNextUnregisteredWord()
+        guard persist() else { return false }
+        dailyProgress.recordRegistration()
+        if !selectNextUnregisteredWord() {
+            dailyProgress.setCurrentDailyWordID(nil)
+        }
+        return true
     }
 
     func go(_ next: LearningStep) { withAnimation(.easeInOut(duration: 0.3)) { step = next } }
@@ -187,9 +209,10 @@ final class LearningFlow: ObservableObject {
         quizMessage = nil
         quizCompleted = false
     }
-    private func persist() {
+    @discardableResult
+    private func persist() -> Bool {
         guard let data = try? JSONEncoder().encode(entries),
-              let storageURL = Self.storageURL else { return }
+              let storageURL = Self.storageURL else { return false }
         do {
             try FileManager.default.createDirectory(
                 at: storageURL.deletingLastPathComponent(),
@@ -197,8 +220,10 @@ final class LearningFlow: ObservableObject {
             )
             try data.write(to: storageURL, options: .atomic)
             UserDefaults.standard.removeObject(forKey: Self.legacyStorageKey)
+            return true
         } catch {
             assertionFailure("Failed to save karuta entries: \(error.localizedDescription)")
+            return false
         }
     }
 

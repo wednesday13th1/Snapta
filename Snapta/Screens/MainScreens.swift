@@ -244,7 +244,7 @@ struct HomeLearningFlowScreen: View {
 
     private func save(_ image: UIImage) {
         guard !completed else { return }
-        flow.registerCurrentWord(userMeaning: meaning, image: image)
+        guard flow.registerCurrentWord(userMeaning: meaning, image: image) else { return }
         withAnimation(.easeOut(duration: 0.2)) { completed = true }
         Task {
             try? await Task.sleep(for: .milliseconds(900))

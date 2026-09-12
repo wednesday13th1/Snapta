@@ -17,11 +17,20 @@ private enum AppTab: String, CaseIterable {
 }
 
 struct ContentView: View {
-    @StateObject private var flow = LearningFlow()
+    @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var dailyProgress: DailyProgressManager
+    @StateObject private var flow: LearningFlow
     @State private var selectedTab: AppTab = .home
     @State private var showAddFlow = false
     @State private var showHomeLearningFlow = false
     @State private var showAddedMessage = false
+    @State private var dailySummary: DailySummary?
+
+    init() {
+        let dailyProgress = DailyProgressManager()
+        _dailyProgress = StateObject(wrappedValue: dailyProgress)
+        _flow = StateObject(wrappedValue: LearningFlow(dailyProgress: dailyProgress))
+    }
 
     var body: some View {
         JapaneseBackground {
@@ -62,6 +71,20 @@ struct ContentView: View {
         .fullScreenCover(isPresented: $showHomeLearningFlow) {
             HomeLearningFlowScreen(flow: flow, close: { showHomeLearningFlow = false })
                 .tint(SnaptaTheme.indigo)
+        }
+        .alert(item: $dailySummary) { summary in
+            Alert(
+                title: Text("昨日の記録"),
+                message: Text("昨日は\(summary.registeredCount)個の単語が登録されました"),
+                dismissButton: .default(Text("OK"))
+            )
+        }
+        .onAppear { checkDailyProgress() }
+        .onChange(of: selectedTab) { _, tab in
+            if tab == .home { checkDailyProgress() }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { checkDailyProgress() }
         }
     }
 
@@ -106,6 +129,16 @@ struct ContentView: View {
         guard let first = flow.learnedEntries.first else { return }
         flow.select(first)
         flow.go(.quiz)
+    }
+
+    private func checkDailyProgress(currentDate: Date = Date()) {
+        if dailyProgress.checkForNewDay(currentDate: currentDate) {
+            flow.refreshDailyWordForNewDay()
+        }
+        if let summary = dailyProgress.pendingSummary {
+            dailySummary = summary
+            dailyProgress.markSummaryAsShown()
+        }
     }
 }
 
