@@ -174,6 +174,11 @@ struct ContentView_Previews: PreviewProvider {
             ContentView().previewDevice("iPhone SE (3rd generation)").previewDisplayName("Small iPhone")
             ContentView().previewDevice("iPhone 17 Pro").previewDisplayName("Standard iPhone")
             ContentView().previewDevice("iPhone 17 Pro Max").previewDisplayName("Large iPhone")
+            ContentView().previewDevice("iPad Pro 11-inch (M4)").previewDisplayName("iPad")
+            ContentView()
+                .previewDevice("iPhone SE (3rd generation)")
+                .environment(\.dynamicTypeSize, .accessibility3)
+                .previewDisplayName("Small iPhone · Accessibility Large")
         }
     }
 }

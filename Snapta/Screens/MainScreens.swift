@@ -93,7 +93,11 @@ struct HomeLearningFlowScreen: View {
                     PaperPanel {
                         if step == .meaning { meaningStep } else { photoStep }
                     }
-                    .padding(20)
+                    .frame(maxWidth: SnaptaSpacing.maxContentWidth)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.horizontal, SnaptaSpacing.screen)
+                    .padding(.top, SnaptaSpacing.section)
+                    .padding(.bottom, SnaptaSpacing.section)
                 }
                 .scrollDismissesKeyboard(.immediately)
             }
@@ -119,8 +123,9 @@ struct HomeLearningFlowScreen: View {
             Text(step == .meaning ? "意味を調べてみよう" : "写真を探そう")
                 .font(SnaptaTheme.mincho(20, weight: .semibold))
                 .foregroundStyle(SnaptaTheme.indigo)
-                .lineLimit(1)
+                .lineLimit(2)
                 .minimumScaleFactor(0.72)
+                .multilineTextAlignment(.center)
                 .padding(.horizontal, 82)
             HStack {
                 Button {
@@ -143,26 +148,35 @@ struct HomeLearningFlowScreen: View {
     }
 
     private var meaningStep: some View {
-        VStack(spacing: 22) {
+        VStack(spacing: 0) {
             WordCard(word: flow.word, reading: flow.currentEntry.reading)
+                .padding(.bottom, SnaptaSpacing.section)
             Text("この言葉は、どんな意味だろう？")
                 .font(.system(size: 17, weight: .bold))
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.bottom, SnaptaSpacing.screen)
             TextField("", text: $meaning, axis: .vertical)
+                .textFieldStyle(.plain)
                 .lineLimit(4...7)
-                .frame(minHeight: 125)
-                .padding(10)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, minHeight: 120, idealHeight: 140, alignment: .topLeading)
+                .padding(.horizontal, 10)
                 .background(Color.clear)
                 .focused($meaningFocused)
                 .submitLabel(.done)
                 .onSubmit { dismissMeaningKeyboard() }
-            .background(SnaptaTheme.paper)
-            .clipShape(RoundedRectangle(cornerRadius: 7))
-            .overlay(RoundedRectangle(cornerRadius: 7).stroke(SnaptaTheme.line))
+                .background(SnaptaTheme.paper)
+                .clipShape(RoundedRectangle(cornerRadius: 7))
+                .overlay(RoundedRectangle(cornerRadius: 7).stroke(SnaptaTheme.line))
+                .padding(.bottom, SnaptaSpacing.screen)
 
             Text("辞書の文章をそのまま写さなくても大丈夫。\n自分の言葉で書いてみよう。")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(SnaptaTheme.ink.opacity(0.58))
                 .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.bottom, 22)
 
             PrimaryButton("次へ") {
                 meaningFocused = false
@@ -287,12 +301,17 @@ struct NotebookScreen: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 14) {
+            VStack(spacing: SnaptaSpacing.related) {
                 ScreenHeader(title: "わたしの単語帳", subtitle: "見つけた言葉を、くり返し覚えよう。")
                 Picker("表示方法", selection: $mode) {
                     ForEach(Mode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                 }.pickerStyle(.segmented)
-            }.padding(.horizontal, 20).padding(.top, 18)
+            }
+            .frame(maxWidth: SnaptaSpacing.maxContentWidth)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.horizontal, SnaptaSpacing.screen)
+            .padding(.top, SnaptaSpacing.screen)
+            .padding(.bottom, SnaptaSpacing.related)
 
             if flow.learnedEntries.isEmpty {
                 EmptyState(icon: "book.closed", text: "見つけた言葉はまだありません").padding(20)
@@ -303,27 +322,36 @@ struct NotebookScreen: View {
                             Button { selected = entry } label: { NotebookListRow(entry: entry) }.buttonStyle(.plain)
                         }
                     }
-                    .padding(20)
+                    .frame(maxWidth: SnaptaSpacing.maxContentWidth)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.horizontal, SnaptaSpacing.screen)
+                    .padding(.vertical, SnaptaSpacing.related)
                 }
             } else {
-                VStack(spacing: 0) {
-                    Text("\(min(cardIndex, flow.learnedEntries.count - 1) + 1) / \(flow.learnedEntries.count)")
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(SnaptaTheme.ink.opacity(0.5))
-                        .frame(maxWidth: .infinity, minHeight: 40)
-                        .padding(.top, 6)
+                ScrollView {
+                    VStack(spacing: SnaptaSpacing.card) {
+                        Text("\(min(cardIndex, flow.learnedEntries.count - 1) + 1) / \(flow.learnedEntries.count)")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(SnaptaTheme.ink.opacity(0.5))
+                            .frame(maxWidth: .infinity)
 
-                    GeometryReader { proxy in
                         NotebookStudyCard(
                             entry: flow.learnedEntries[min(cardIndex, flow.learnedEntries.count - 1)],
                             showsMeaning: $showsMeaning,
                             previous: { moveCard(-1) },
                             next: { moveCard(1) }
                         )
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 20)
-                        .frame(width: proxy.size.width, height: proxy.size.height)
+
+                        HStack(spacing: SnaptaSpacing.related) {
+                            notebookNavigationButton("前の単語", icon: "chevron.left", action: { moveCard(-1) })
+                            notebookNavigationButton("次の単語", icon: "chevron.right", action: { moveCard(1) })
+                        }
                     }
+                    .frame(maxWidth: SnaptaSpacing.maxContentWidth)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.horizontal, SnaptaSpacing.screen)
+                    .padding(.top, SnaptaSpacing.related)
+                    .padding(.bottom, SnaptaSpacing.section)
                 }
             }
         }
@@ -340,6 +368,22 @@ struct NotebookScreen: View {
             cardIndex = (cardIndex + offset + count) % count
             showsMeaning = false
         }
+    }
+
+    private func notebookNavigationButton(_ title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: icon)
+                .font(.system(size: 15, weight: .bold))
+                .lineLimit(2)
+                .minimumScaleFactor(0.72)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity, minHeight: SnaptaSpacing.controlHeight)
+                .foregroundStyle(SnaptaTheme.indigo)
+                .background(SnaptaTheme.paperLight)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(SnaptaTheme.indigo.opacity(0.3)))
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -372,15 +416,15 @@ private struct NotebookStudyCard: View {
     let next: () -> Void
 
     var body: some View {
-        VStack(spacing: 16) {
-            Button { withAnimation(.easeOut(duration: 0.16)) { showsMeaning.toggle() } } label: {
-                VStack(spacing: 14) {
-                    VStack(spacing: 4) {
+        Button { withAnimation(.easeOut(duration: 0.16)) { showsMeaning.toggle() } } label: {
+                VStack(spacing: 0) {
+                    VStack(spacing: 6) {
                         Text(entry.reading).font(.system(size: 17, weight: .medium)).foregroundStyle(SnaptaTheme.ink.opacity(0.5))
                             .lineLimit(1).minimumScaleFactor(0.7)
                         Text(entry.word).font(SnaptaTheme.mincho(46, weight: .semibold)).foregroundStyle(SnaptaTheme.indigo)
                             .lineLimit(1).minimumScaleFactor(0.65)
                     }
+                    .padding(.bottom, SnaptaSpacing.section)
                     ZStack {
                         Group {
                             if let image = entry.image {
@@ -405,25 +449,24 @@ private struct NotebookStudyCard: View {
                             .padding(20)
                             .opacity(showsMeaning ? 1 : 0)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .frame(maxWidth: .infinity)
+                    .aspectRatio(4 / 5, contentMode: .fill)
                     .clipped()
                     .clipShape(RoundedRectangle(cornerRadius: 5))
                     Text(showsMeaning ? "タップして写真を見る" : "タップして意味を見る")
                         .font(.system(size: 15, weight: .semibold)).foregroundStyle(SnaptaTheme.ink.opacity(0.55))
-                }.padding(20).frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(.top, 18)
+                        .fixedSize(horizontal: false, vertical: true)
+                }.padding(SnaptaSpacing.card).frame(maxWidth: .infinity)
                     .background(SnaptaTheme.paperLight).clipShape(RoundedRectangle(cornerRadius: 6))
                     .overlay(RoundedRectangle(cornerRadius: 6).stroke(SnaptaTheme.line))
-            }.buttonStyle(.plain).frame(maxHeight: .infinity)
-                .gesture(DragGesture(minimumDistance: 28).onEnded { value in
-                    guard abs(value.translation.width) > abs(value.translation.height) else { return }
-                    value.translation.width < 0 ? next() : previous()
-                })
-            HStack {
-                Button(action: previous) { Label("前へ", systemImage: "chevron.left") }
-                Spacer()
-                Button(action: next) { Label("次へ", systemImage: "chevron.right").labelStyle(.titleAndIcon) }
-            }.font(.system(size: 17, weight: .bold)).foregroundStyle(SnaptaTheme.indigo).padding(.horizontal, 12)
-        }
+            }
+            .buttonStyle(.plain)
+            .frame(maxWidth: SnaptaSpacing.maxContentWidth)
+            .gesture(DragGesture(minimumDistance: 28).onEnded { value in
+                guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                value.translation.width < 0 ? next() : previous()
+            })
     }
 }
 

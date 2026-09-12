@@ -14,6 +14,17 @@ enum SnaptaTheme {
     }
 }
 
+enum SnaptaSpacing {
+    static let compact: CGFloat = 8
+    static let related: CGFloat = 12
+    static let screen: CGFloat = 16
+    static let screenComfortable: CGFloat = 20
+    static let section: CGFloat = 24
+    static let card: CGFloat = 20
+    static let controlHeight: CGFloat = 52
+    static let maxContentWidth: CGFloat = 600
+}
+
 struct SeigaihaPattern: View {
     var color: Color = SnaptaTheme.indigo.opacity(0.055)
 
@@ -63,8 +74,8 @@ struct PaperPanel<Content: View>: View {
 
     var body: some View {
         content
-            .padding(.horizontal, dynamicTypeSize.isAccessibilitySize ? 14 : 20)
-            .padding(.vertical, dynamicTypeSize.isAccessibilitySize ? 16 : 22)
+            .padding(.horizontal, dynamicTypeSize.isAccessibilitySize ? SnaptaSpacing.screen : SnaptaSpacing.card)
+            .padding(.vertical, dynamicTypeSize.isAccessibilitySize ? SnaptaSpacing.screen : 22)
             .frame(maxWidth: .infinity)
             .background(SnaptaTheme.paperLight)
             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
@@ -96,9 +107,9 @@ struct PrimaryButton: View {
                     .minimumScaleFactor(0.75)
             }
             .font(.system(size: 17, weight: .bold))
-            .padding(.horizontal, 16)
+            .padding(.horizontal, SnaptaSpacing.screen)
             .frame(maxWidth: .infinity)
-            .frame(minHeight: 52)
+            .frame(minHeight: SnaptaSpacing.controlHeight)
             .foregroundStyle(.white)
             .background(SnaptaTheme.indigo)
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
