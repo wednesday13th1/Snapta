@@ -10,12 +10,14 @@ struct FlashcardScreen: View {
 
     var body: some View {
         VStack(spacing: 18) {
-            HStack {
+            HStack(spacing: 10) {
                 Text("ことばの単語帳").font(SnaptaTheme.mincho(24, weight: .semibold))
+                    .lineLimit(1).minimumScaleFactor(0.72)
                 Spacer()
                 Text("\(page + 1) / \(flow.entries.count)")
                     .font(.system(size: 13, weight: .bold)).foregroundStyle(SnaptaTheme.ink.opacity(0.5))
-            }.padding(.horizontal, 24)
+                    .lineLimit(1).fixedSize()
+            }.padding(.horizontal, 18)
 
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 8).fill(SnaptaTheme.ink.opacity(0.08)).offset(x: 7, y: 5)
@@ -43,16 +45,26 @@ struct FlashcardScreen: View {
                 if value.translation.width > 40 { changePage(by: -1) }
             })
 
-            HStack(spacing: 30) {
-                Button { changePage(by: -1) } label: { Image(systemName: "chevron.left").frame(width: 48, height: 48) }
-                    .disabled(page == 0).opacity(page == 0 ? 0.3 : 1)
-                Text(showBack ? "タップでことばへ" : "タップで答えを見る")
-                    .font(.system(size: 13, weight: .medium)).foregroundStyle(SnaptaTheme.ink.opacity(0.55))
-                Button { changePage(by: 1) } label: { Image(systemName: "chevron.right").frame(width: 48, height: 48) }
-                    .disabled(page == flow.entries.count - 1).opacity(page == flow.entries.count - 1 ? 0.3 : 1)
-            }.foregroundStyle(SnaptaTheme.indigo)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 30) { navigationControls }
+                HStack(spacing: 10) { navigationControls }
+            }
+            .foregroundStyle(SnaptaTheme.indigo)
+            .padding(.horizontal, 12)
             Spacer(minLength: 15)
         }
+    }
+
+    @ViewBuilder
+    private var navigationControls: some View {
+        Button { changePage(by: -1) } label: { Image(systemName: "chevron.left").frame(width: 48, height: 48) }
+            .disabled(page == 0).opacity(page == 0 ? 0.3 : 1)
+        Text(showBack ? "タップでことばへ" : "タップで答えを見る")
+            .font(.system(size: 13, weight: .medium)).foregroundStyle(SnaptaTheme.ink.opacity(0.55))
+            .lineLimit(1).minimumScaleFactor(0.65)
+            .frame(maxWidth: .infinity)
+        Button { changePage(by: 1) } label: { Image(systemName: "chevron.right").frame(width: 48, height: 48) }
+            .disabled(page == flow.entries.count - 1).opacity(page == flow.entries.count - 1 ? 0.3 : 1)
     }
 
     private var frontPage: some View {

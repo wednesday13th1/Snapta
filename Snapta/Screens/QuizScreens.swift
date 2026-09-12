@@ -113,6 +113,8 @@ private struct KarutaGameView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
     @State private var collisionCardID: UUID?
+    @State private var showsIncorrectFeedback = false
+    @State private var incorrectFeedbackID = UUID()
 
     var body: some View {
         VStack(spacing: 3) {
@@ -120,9 +122,14 @@ private struct KarutaGameView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(game.phase == .listening ? "よく聞いて…" : "正しい札を見つけよう！")
                         .font(SnaptaTheme.mincho(17, weight: .semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
                     Text(voiceOver ? "札を選び、上にスワイプして答えます" : "札を横へすばやく払おう")
                         .font(.system(size: 12, weight: .medium)).foregroundStyle(SnaptaTheme.ink.opacity(0.55))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                .layoutPriority(1)
                 Spacer()
                 Button { isMuted.toggle() } label: {
                     Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
@@ -130,7 +137,7 @@ private struct KarutaGameView: View {
                         .foregroundStyle(isMuted ? SnaptaTheme.vermilion : SnaptaTheme.indigo)
                         .background(SnaptaTheme.paperLight, in: Circle())
                 }.accessibilityLabel(isMuted ? "音声をオンにする" : "音声をミュート")
-            }.padding(.horizontal, 18).padding(.vertical, 2)
+            }.padding(.horizontal, 14).padding(.vertical, 2)
 
             if isMuted {
                 Text(game.currentEntry.meaningText)
@@ -143,6 +150,18 @@ private struct KarutaGameView: View {
                     .background(SnaptaTheme.paperLight.opacity(0.96), in: RoundedRectangle(cornerRadius: 7))
                     .overlay(RoundedRectangle(cornerRadius: 7).stroke(SnaptaTheme.line))
                     .accessibilityLabel("問題、\(game.currentEntry.meaningText)")
+            }
+
+            if showsIncorrectFeedback {
+                Label("もう一度考えてみよう", systemImage: "arrow.counterclockwise")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(SnaptaTheme.vermilion)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 9)
+                    .background(SnaptaTheme.paperLight, in: Capsule())
+                    .overlay(Capsule().stroke(SnaptaTheme.vermilion.opacity(0.35)))
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .accessibilityAddTraits(.isStaticText)
             }
 
             GeometryReader { proxy in
@@ -189,8 +208,20 @@ private struct KarutaGameView: View {
             }
         } else {
             KarutaFeedback.incorrect()
+            showIncorrectFeedback()
         }
         return correct
+    }
+
+    private func showIncorrectFeedback() {
+        let feedbackID = UUID()
+        incorrectFeedbackID = feedbackID
+        withAnimation(.easeOut(duration: 0.18)) { showsIncorrectFeedback = true }
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1.4))
+            guard incorrectFeedbackID == feedbackID else { return }
+            withAnimation(.easeIn(duration: 0.18)) { showsIncorrectFeedback = false }
+        }
     }
 }
 
@@ -232,7 +263,7 @@ private struct KarutaCardView: View {
         }.allowsHitTesting(false) }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(entry.reading)、\(entry.word)の札")
-        .accessibilityHint("上にスワイプして答える")
+        .accessibilityHint("タップまたは横にスワイプして答える")
         .accessibilityAddTraits(.isButton)
     }
 }
@@ -264,6 +295,15 @@ private struct KarutaCardMotion {
         destination = accessibilityDirection * 520
         duration = 0.28
         rotation = Double(accessibilityDirection) * 6
+    }
+
+    init(tapDirection: CGFloat, boardWidth: CGFloat) {
+        direction = tapDirection
+        speed = 1_150
+        horizontalTranslation = tapDirection * 120
+        destination = tapDirection * max(360, boardWidth * 1.05)
+        duration = 0.27
+        rotation = Double(tapDirection) * 8
     }
 
 
@@ -311,6 +351,7 @@ private struct KarutaInteractiveCard: View {
             .animation(.easeOut(duration: 0.1), value: pressing)
             .animation(.spring(response: 0.22, dampingFraction: 0.48), value: collisionPulse)
             .gesture(dragGesture)
+            .onTapGesture { tapCard() }
             .accessibilityAction { accessibilitySubmit() }
             .allowsHitTesting(enabled)
     }
@@ -369,6 +410,12 @@ private struct KarutaInteractiveCard: View {
     }
 
     private func returnHome() { withAnimation(.spring(response: 0.25, dampingFraction: 0.75)) { settledOffset = .zero; displayState = .idle } }
+    private func tapCard() {
+        guard enabled else { return }
+        touched()
+        let direction: CGFloat = placement.offset.width < -8 ? -1 : 1
+        resolve(KarutaCardMotion(tapDirection: direction, boardWidth: boardWidth), pressDelay: true)
+    }
     private func accessibilitySubmit() {
         guard enabled else { return }
         touched()

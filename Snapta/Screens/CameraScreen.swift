@@ -12,24 +12,22 @@ struct CameraScreen: View {
                 WordCard(word: flow.word, reading: flow.currentEntry.reading, compact: true).padding(.top, 8)
                 Text("身の回りから「\(flow.word)」を見つけよう")
                     .font(.system(size: 15, weight: .bold)).foregroundStyle(.white)
+                    .lineLimit(2).minimumScaleFactor(0.75).multilineTextAlignment(.center)
                     .padding(.horizontal, 18).padding(.vertical, 10)
                     .background(.black.opacity(0.42), in: Capsule())
                 Spacer()
                 Text("その場で撮るか、アルバムから選んでね")
                     .font(.system(size: 13, weight: .medium)).foregroundStyle(.white)
+                    .lineLimit(2).minimumScaleFactor(0.8).multilineTextAlignment(.center)
                     .padding(.horizontal, 16).padding(.vertical, 9)
                     .background(.black.opacity(0.42), in: Capsule())
-                HStack(spacing: 22) {
-                    PhotoChoiceButton(title: "カメラで撮る", icon: "camera.fill", isShutter: true) {
-                        pickerSource = UIImagePickerController.isSourceTypeAvailable(.camera) ? .camera : .library
-                    }
-                    PhotoChoiceButton(title: "写真を選ぶ", icon: "photo.on.rectangle", isShutter: false) {
-                        pickerSource = .library
-                    }
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 16) { photoChoiceButtons }
+                    VStack(spacing: 12) { photoChoiceButtons }
                 }
                 .padding(.top, 15).padding(.bottom, 30)
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, 16)
         }
         .sheet(item: $pickerSource) { source in
             ImagePicker(sourceType: source.uiSource, image: $flow.capturedImage) { didChooseImage in
@@ -40,6 +38,16 @@ struct CameraScreen: View {
                 }
             }
             .ignoresSafeArea(edges: source == .camera ? .all : [])
+        }
+    }
+
+    @ViewBuilder
+    private var photoChoiceButtons: some View {
+        PhotoChoiceButton(title: "カメラで撮る", icon: "camera.fill", isShutter: true) {
+            pickerSource = UIImagePickerController.isSourceTypeAvailable(.camera) ? .camera : .library
+        }
+        PhotoChoiceButton(title: "写真を選ぶ", icon: "photo.on.rectangle", isShutter: false) {
+            pickerSource = .library
         }
     }
 }
@@ -69,7 +77,9 @@ private struct PhotoChoiceButton: View {
                     Circle().stroke(.white.opacity(0.65), lineWidth: 2).frame(width: 76, height: 76)
                 }
                 Text(title).font(.system(size: 13, weight: .bold)).foregroundStyle(.white)
+                    .lineLimit(1).minimumScaleFactor(0.72)
             }
+            .frame(minWidth: 112)
         }
         .accessibilityLabel(title)
     }

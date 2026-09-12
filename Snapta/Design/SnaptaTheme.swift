@@ -59,10 +59,12 @@ struct JapaneseBackground<Content: View>: View {
 
 struct PaperPanel<Content: View>: View {
     @ViewBuilder let content: Content
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         content
-            .padding(24)
+            .padding(.horizontal, dynamicTypeSize.isAccessibilitySize ? 14 : 20)
+            .padding(.vertical, dynamicTypeSize.isAccessibilitySize ? 16 : 22)
             .frame(maxWidth: .infinity)
             .background(SnaptaTheme.paperLight)
             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
@@ -90,10 +92,13 @@ struct PrimaryButton: View {
             HStack(spacing: 10) {
                 if let icon { Image(systemName: icon) }
                 Text(title)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
             .font(.system(size: 17, weight: .bold))
+            .padding(.horizontal, 16)
             .frame(maxWidth: .infinity)
-            .frame(height: 54)
+            .frame(minHeight: 52)
             .foregroundStyle(.white)
             .background(SnaptaTheme.indigo)
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))

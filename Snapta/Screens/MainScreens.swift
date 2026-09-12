@@ -6,7 +6,9 @@ struct ScreenHeader: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title).font(SnaptaTheme.mincho(28, weight: .semibold)).foregroundStyle(SnaptaTheme.ink)
+                .lineLimit(1).minimumScaleFactor(0.72)
             Text(subtitle).font(.system(size: 14, weight: .medium)).foregroundStyle(SnaptaTheme.ink.opacity(0.58))
+                .fixedSize(horizontal: false, vertical: true)
         }.frame(maxWidth: .infinity, alignment: .leading)
     }
 }
@@ -93,6 +95,7 @@ struct HomeLearningFlowScreen: View {
                     }
                     .padding(20)
                 }
+                .scrollDismissesKeyboard(.immediately)
             }
             .overlay {
                 if completed {
@@ -112,24 +115,30 @@ struct HomeLearningFlowScreen: View {
     }
 
     private var header: some View {
-        HStack {
-            Button {
-                if step == .photo && image == nil {
-                    step = .meaning
-                } else {
-                    close()
-                }
-            } label: {
-                Label("戻る", systemImage: "chevron.left").frame(minHeight: 44)
-            }
-            Spacer()
+        ZStack {
             Text(step == .meaning ? "意味を調べてみよう" : "写真を探そう")
                 .font(SnaptaTheme.mincho(20, weight: .semibold))
                 .foregroundStyle(SnaptaTheme.indigo)
-            Spacer()
-            Color.clear.frame(width: 70, height: 44)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+                .padding(.horizontal, 82)
+            HStack {
+                Button {
+                    if step == .photo && image == nil {
+                        step = .meaning
+                    } else {
+                        close()
+                    }
+                } label: {
+                    Label("戻る", systemImage: "chevron.left")
+                        .lineLimit(1)
+                        .frame(minWidth: 62, minHeight: 44)
+                }
+                Spacer()
+            }
         }
-        .padding(.horizontal, 14)
+        .frame(minHeight: 48)
+        .padding(.horizontal, 8)
         .background(SnaptaTheme.paper.opacity(0.94))
     }
 
@@ -138,22 +147,14 @@ struct HomeLearningFlowScreen: View {
             WordCard(word: flow.word, reading: flow.currentEntry.reading)
             Text("この言葉は、どんな意味だろう？")
                 .font(.system(size: 17, weight: .bold))
-            ZStack(alignment: .topLeading) {
-                if meaning.isEmpty {
-                    Text("例）\(flow.currentEntry.meaningText)")
-                        .foregroundStyle(SnaptaTheme.ink.opacity(0.38))
-                        .padding(.horizontal, 17).padding(.vertical, 16)
-                        .allowsHitTesting(false)
-                }
-                TextField("", text: $meaning, axis: .vertical)
-                    .lineLimit(4...7)
-                    .frame(minHeight: 125)
-                    .padding(10)
-                    .background(Color.clear)
-                    .focused($meaningFocused)
-                    .submitLabel(.done)
-                    .onSubmit { dismissMeaningKeyboard() }
-            }
+            TextField("", text: $meaning, axis: .vertical)
+                .lineLimit(4...7)
+                .frame(minHeight: 125)
+                .padding(10)
+                .background(Color.clear)
+                .focused($meaningFocused)
+                .submitLabel(.done)
+                .onSubmit { dismissMeaningKeyboard() }
             .background(SnaptaTheme.paper)
             .clipShape(RoundedRectangle(cornerRadius: 7))
             .overlay(RoundedRectangle(cornerRadius: 7).stroke(SnaptaTheme.line))
@@ -170,6 +171,11 @@ struct HomeLearningFlowScreen: View {
             }
             .disabled(trimmedMeaning.isEmpty)
             .opacity(trimmedMeaning.isEmpty ? 0.4 : 1)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard meaningFocused else { return }
+            dismissMeaningKeyboard()
         }
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
@@ -300,16 +306,24 @@ struct NotebookScreen: View {
                     .padding(20)
                 }
             } else {
-                GeometryReader { proxy in
-                    NotebookStudyCard(
-                        entry: flow.learnedEntries[min(cardIndex, flow.learnedEntries.count - 1)],
-                        position: "\(min(cardIndex, flow.learnedEntries.count - 1) + 1) / \(flow.learnedEntries.count)",
-                        showsMeaning: $showsMeaning,
-                        previous: { moveCard(-1) },
-                        next: { moveCard(1) }
-                    )
-                    .padding(20)
-                    .frame(width: proxy.size.width, height: proxy.size.height)
+                VStack(spacing: 0) {
+                    Text("\(min(cardIndex, flow.learnedEntries.count - 1) + 1) / \(flow.learnedEntries.count)")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(SnaptaTheme.ink.opacity(0.5))
+                        .frame(maxWidth: .infinity, minHeight: 40)
+                        .padding(.top, 6)
+
+                    GeometryReader { proxy in
+                        NotebookStudyCard(
+                            entry: flow.learnedEntries[min(cardIndex, flow.learnedEntries.count - 1)],
+                            showsMeaning: $showsMeaning,
+                            previous: { moveCard(-1) },
+                            next: { moveCard(1) }
+                        )
+                        .padding(.horizontal, 20)
+                        .padding(.bottom, 20)
+                        .frame(width: proxy.size.width, height: proxy.size.height)
+                    }
                 }
             }
         }
@@ -353,14 +367,12 @@ private struct NotebookListRow: View {
 
 private struct NotebookStudyCard: View {
     let entry: KarutaEntry
-    let position: String
     @Binding var showsMeaning: Bool
     let previous: () -> Void
     let next: () -> Void
 
     var body: some View {
         VStack(spacing: 16) {
-            Text(position).font(.system(size: 16, weight: .bold)).foregroundStyle(SnaptaTheme.ink.opacity(0.5))
             Button { withAnimation(.easeOut(duration: 0.16)) { showsMeaning.toggle() } } label: {
                 VStack(spacing: 14) {
                     VStack(spacing: 4) {

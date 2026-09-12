@@ -113,13 +113,22 @@ private struct FlowHeader: View {
     let title: String
     let close: () -> Void
     var body: some View {
-        HStack {
-            Button(action: close) { Image(systemName: "xmark").frame(width: 44, height: 44) }.accessibilityLabel("閉じる")
-            Spacer()
-            Text(title).font(SnaptaTheme.mincho(20, weight: .semibold)).foregroundStyle(SnaptaTheme.indigo)
-            Spacer()
-            Color.clear.frame(width: 44, height: 44)
-        }.padding(.horizontal, 10).background(SnaptaTheme.paper.opacity(0.94))
+        ZStack {
+            Text(title)
+                .font(SnaptaTheme.mincho(20, weight: .semibold))
+                .foregroundStyle(SnaptaTheme.indigo)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .padding(.horizontal, 58)
+            HStack {
+                Button(action: close) { Image(systemName: "xmark").frame(width: 44, height: 44) }
+                    .accessibilityLabel("閉じる")
+                Spacer()
+            }
+        }
+        .frame(minHeight: 48)
+        .padding(.horizontal, 8)
+        .background(SnaptaTheme.paper.opacity(0.94))
     }
 }
 
@@ -137,12 +146,12 @@ private struct BottomNavigation: View {
                         Image(systemName: "plus").font(.system(size: 21, weight: .bold)).foregroundStyle(.white)
                     }
                     Text("追加").font(.system(size: 11, weight: .bold)).foregroundStyle(SnaptaTheme.indigo)
-                }.frame(maxWidth: .infinity)
+                }.frame(maxWidth: .infinity, minHeight: 58)
             }.accessibilityLabel("新しい言葉を追加")
             tab(.notebook)
         }
         .padding(.top, 8)
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 4)
         .background(.ultraThinMaterial)
         .overlay(alignment: .top) { Rectangle().fill(SnaptaTheme.line).frame(height: 1) }
     }
@@ -152,11 +161,19 @@ private struct BottomNavigation: View {
             VStack(spacing: 4) {
                 Image(systemName: tab.icon).font(.system(size: 19, weight: .semibold)).frame(height: 26)
                 Text(tab.rawValue).font(.system(size: 11, weight: selected == tab ? .bold : .medium))
-            }.foregroundStyle(selected == tab ? SnaptaTheme.indigo : SnaptaTheme.ink.opacity(0.42)).frame(maxWidth: .infinity)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+            }.foregroundStyle(selected == tab ? SnaptaTheme.indigo : SnaptaTheme.ink.opacity(0.42))
+                .frame(maxWidth: .infinity, minHeight: 58)
         }.accessibilityLabel(tab.rawValue).accessibilityAddTraits(selected == tab ? .isSelected : [])
     }
 }
 
 struct ContentView_Previews: PreviewProvider {
-    static var previews: some View { ContentView().previewDisplayName("Snapta") }
+    static var previews: some View {
+        Group {
+            ContentView().previewDevice("iPhone SE (3rd generation)").previewDisplayName("Small iPhone")
+            ContentView().previewDevice("iPhone 17 Pro").previewDisplayName("Standard iPhone")
+            ContentView().previewDevice("iPhone 17 Pro Max").previewDisplayName("Large iPhone")
+        }
+    }
 }
